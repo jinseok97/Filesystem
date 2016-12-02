@@ -248,6 +248,76 @@ void printPwd(Inode *pInode, Data *pData,TNode *pRoot, TNode *Pwd, TNode **pUwd)
 		printf("%s\n",pStack->data);
 }
 
+void absolutePath(Inode *pInode,Data *pData,TNode *pRoot, TNode **tPwd, SNode *pSNode)
+{
+	long long idNum = (*tPwd==NULL) ? pRoot->idNum : (*tPwd)->idNum;
+	long long dbNum = pInode[idNum].direct;
+
+	int i;
+
+	for(i=0;i<16;i++)
+	{
+		if(strcmp(pData[dbNum].directory.name[i],pSNode->data)==0)
+		{
+			idNum = pData[dbNum].directory.idNum[i];
+			break;
+		}
+	}
+	if(i==16)		{  return ; }
+	preorderTraverseP(pRoot, pInode, pData, idNum, tPwd);
+
+}
+
+void relativePath(Inode *pInode, TNode *pRoot, TNode **tPwd, TNode **tUwd, Data *pData, SNode *pSNode)
+
+	long long idNum = (*tPwd)->idNum;
+	long long dbNum = pInode[idNum].direct;
+
+	int i;
+
+	if(strcmp("..",pSNode->data)==0)
+	{
+		(*tPwd) = (*tUwd); 
+		idNum = (*tPwd)->idNum;
+	}
+	else
+	{
+		for(i=0;i<16;i++)
+		{
+			if(strcmp(pData[dbNum].directory.name[i],pSNode->data)==0)
+			{
+				idNum = pData[dbNum].directory.idNum[i];
+				break;
+			}
+		}
+		if(i==16)		{  return 1; }
+		preorderTraverseP(pRoot, pInode, pData, idNum, tUwd);
+
+	}
+
+	
+	dbNum = pInode[idNum].direct;
+
+	for(i=0;i<16;i++)
+	{
+		if(strcmp(pData[dbNum].directory.name[i],"..")==0)
+		{
+			idNum = pData[dbNum].directory.idNum[i];
+			break;
+		}
+	}
+	if(i==16)		{  return 2; }
+	preorderTraverseP(pRoot, pInode, pData, idNum, tUwd);
+
+	return 0;
+}
+
+void mycd(TNode **pPwd,TNode **pUwd,TNode *tPwd, TNode tUwd)
+{
+	(*pPwd) = tPwd;
+	(*pUwd) = tUwd;
+}
+
 int main(void)
 {
 	SuperBlock spblock ;
@@ -267,6 +337,8 @@ int main(void)
 	TNode *pTNode = NULL;
 	TNode *pwd = &Root;
 	TNode *uPwd = &Root;
+	TNode *tPwd = pwd;
+	TNode *pUwd = uPwd;
 
 	SNode SHAf = {{0},NULL};
 	SNode SHBf = {{0},NULL};
@@ -285,51 +357,75 @@ int main(void)
 		procArgument(&SHBf);
 		upsidedownStack(&SHBf,&SHAf);
 
-		for(pSNode =SHAf.pNext; pSNode != NULL ; pSNode=pSNode->pNext)
+		if(strcmp("mymkdir",SHAf.pNext->data) == 0)
 		{
-			if(strcmp("mymkdir",pSNode->data) == 0)
+			for(pSNode =SHAf.pNext; pSNode != NULL ;)
 			{
 				deleteSNode(&SHAf, pSNode);
 				pSNode = SHAf.pNext;
+				if(pSNode == NULL)	{ break ; }
 				makeDirectory(&spblock, inode, dataBlock, pwd, pSNode->data);
 			}
-			else if(strcmp("myrmdir",pSNode->data) == 0)
+		}
+		else if(strcmp("myrmdir",SHAf.pNext->data) == 0)
+		{
+			//	printf("1\n");
+			for(pSNode =SHAf.pNext; pSNode != NULL ; )
 			{
 				deleteSNode(&SHAf, pSNode);
 				pSNode = SHAf.pNext;
+				if(pSNode == NULL)	{ break ; }
 				removeDirectory(&spblock, inode, dataBlock, pwd, pSNode->data);
 			}
-			else if(strcmp("mytree",pSNode->data) == 0)
+			//	printf("2\n");
+		}
+		else if(strcmp("mytree",SHAf.pNext->data) == 0)
+		{
+			for(pSNode =SHAf.pNext; pSNode != NULL ;)
 			{
 				deleteSNode(&SHAf, pSNode);
 				pSNode = SHAf.pNext;
 				preorderTraverse(pwd, inode, dataBlock);
 			}
-			else if(strcmp("pwd",pSNode->data)==0)
+		}
+		else if(strcmp("pwd",SHAf.pNext->data)==0)
+		{
+			for(pSNode =SHAf.pNext; pSNode != NULL ; )
 			{
 				deleteSNode(&SHAf, pSNode);
 				pSNode = SHAf.pNext;
 				printPwd(inode, dataBlock, &Root, pwd, &uPwd);
 			}
-			else if(strcmp("byebye",pSNode->data) == 0)
+		}
+		else if(strcmp("cd",SHAf.pNext->data) == 0)
+		{
+			for(pSNode =SHAf.pNext; pSNode != NULL ;)
 			{
 				deleteSNode(&SHAf, pSNode);
-				return 0;
+				pSNode = SHAf.pNext;
+				if(strcmp(pSNode->data,"/") == 0)
+					absolutePath(inode, dataBlock, &Root, &tPwd, pSNode);
+				mycd(&pwd, &uPwd, tPwd);
 			}
-
-			if(pSNode == NULL)
-				break;
-
-			deleteSNode(&SHAf, pSNode);
 		}
+		else if(strcmp("byebye",SHAf.pNext->data) == 0)
+		{
+			for(pSNode =SHAf.pNext; pSNode != NULL ;pSNode = pSNode->pNext)
+				deleteSNode(&SHAf, pSNode);
+			return 0;
+		}
+
+		for(pSNode =SHAf.pNext; pSNode != NULL ;pSNode = pSNode->pNext)
+			deleteSNode(&SHAf, pSNode);
+
 		for(int i=0;i<4;i++)
 		{
 			idNum = Root.idNum;
 			dbNum = inode[idNum].direct;
 			printf("[]name:%s, idNum:%d\n",dataBlock[dbNum].directory.name[i], dataBlock[dbNum].directory.idNum[i]);
 		}
+		putchar('\n');
 	}
-	putchar('\n');
 
 	for(TNode *pIndex = Root.pPrev;pIndex != NULL; pIndex=pIndex->pNext)
 		printf("pIndex:%p pIndex->pNext:%p\n",pIndex,pIndex->pNext);
