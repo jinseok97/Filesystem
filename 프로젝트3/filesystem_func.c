@@ -331,6 +331,7 @@ int allocdbinIDdirect(SuperBlock *pSb, Inode *pInode, Data *pData)
 	if(flag == 2)	{ return flag ; }
 
 	pInode->direct = (short) dbNum;
+	printf("%d\n",pInode->direct);
 	//pInode->fileSize += 128;
 
 	return flag;
