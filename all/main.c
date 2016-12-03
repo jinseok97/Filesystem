@@ -19,7 +19,6 @@ int main(void)
 	while(1)
 	{
 		char cmd[5][10] = {0};
-		printBit(spBlock.usableInode[0]);
 		printf("[\\]$ ");
 		for(int i = 0; i < 5; i++)
 		{
@@ -28,7 +27,6 @@ int main(void)
 		}
 
 		cmd_judge(cmd, &spBlock, inode, dataBlock, pwd); 
-		printf("fType : %d\nfTime : %ld\nfSize : %d\nDB : %d\n", inode[1].fileType, (long)inode[1].fileTime, inode[1].fileSize, inode[1].direct);
 	}
 		
 	return 0;

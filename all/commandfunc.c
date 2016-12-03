@@ -53,6 +53,13 @@ void cmd_judge(char cmd[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pw
 		f_mycpfrom(cmd, pSB, ind, pDB, pwd);
 	else if(!strcmp(cmd[0], "mycpto"))
 		f_mycpto(cmd, pSB, ind, pDB, pwd);
+	else if(cmd[0][0] >= '0' && cmd[0][0] <= '9')
+	{	//아이노드검사
+		int i = atoi(cmd[0]);
+		printf("			INODE PRINT\n	[#%d IND] ", i);
+		printf("Type : %d | Size : %d | Time : %d\n", ind[i].fileType, ind[i].fileSize, ind[i].fileTime);
+		printBit(pSB -> usableInode[i / 64]);
+	}
 	else if(cmd[0][0] != 'm' || cmd[0][1] != 'y')
 		f_command(cmd);
 	else
@@ -144,7 +151,7 @@ void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNo
 	}
 
     char c;
-	int flag;
+	int flag;					//수정이 필요(데이터블럭할당)
     for(int i = 0; (c = getc(ifp)) != EOF; i++)
     {
 		if(i % 128 == 0)
@@ -178,7 +185,7 @@ void f_mycpto(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode
 	if(indNum != 512)
 	{
 		ofp = fopen(cmd_line[2], "w");
-		fprintf(ofp, "datablock linkedlist\n");
+		fprintf(ofp, "datablock linkedlist\n");	//데이터블럭 링크드리스트 출력
 		fclose(ofp);
 	}
 	else	
