@@ -222,7 +222,7 @@ bool findUpwd(Inode *pInode,Data *pData,TNode *pRoot,TNode **pUwd, SNode *pHead)
 			break;
 		}
 	}
-	if(i==16)		{ ; return 1; }
+	if(i==16)		{  return 1; }
 	preorderTraverseP(pRoot, pInode, pData, idNum, pUwd);
 	return 0;
 }
@@ -269,6 +269,7 @@ void absolutePath(Inode *pInode,Data *pData,TNode *pRoot, TNode **tPwd, SNode *p
 }
 
 void relativePath(Inode *pInode, TNode *pRoot, TNode **tPwd, TNode **tUwd, Data *pData, SNode *pSNode)
+{
 
 	long long idNum = (*tPwd)->idNum;
 	long long dbNum = pInode[idNum].direct;
@@ -288,14 +289,14 @@ void relativePath(Inode *pInode, TNode *pRoot, TNode **tPwd, TNode **tUwd, Data 
 			{
 				idNum = pData[dbNum].directory.idNum[i];
 				break;
-			}
+			}	
 		}
-		if(i==16)		{  return 1; }
-		preorderTraverseP(pRoot, pInode, pData, idNum, tUwd);
+		if(i==16)		{  return ; }
+		preorderTraverseP(pRoot, pInode, pData, idNum, tPwd);
 
-	}
+	}	
 
-	
+
 	dbNum = pInode[idNum].direct;
 
 	for(i=0;i<16;i++)
@@ -304,15 +305,15 @@ void relativePath(Inode *pInode, TNode *pRoot, TNode **tPwd, TNode **tUwd, Data 
 		{
 			idNum = pData[dbNum].directory.idNum[i];
 			break;
-		}
+		}	
 	}
-	if(i==16)		{  return 2; }
+	if(i==16)		{  return ; }
 	preorderTraverseP(pRoot, pInode, pData, idNum, tUwd);
 
-	return 0;
+	return ;
 }
 
-void mycd(TNode **pPwd,TNode **pUwd,TNode *tPwd, TNode tUwd)
+void mycd(TNode **pPwd,TNode **pUwd,TNode *tPwd, TNode *tUwd)
 {
 	(*pPwd) = tPwd;
 	(*pUwd) = tUwd;
@@ -338,7 +339,7 @@ int main(void)
 	TNode *pwd = &Root;
 	TNode *uPwd = &Root;
 	TNode *tPwd = pwd;
-	TNode *pUwd = uPwd;
+	TNode *tUwd = uPwd;
 
 	SNode SHAf = {{0},NULL};
 	SNode SHBf = {{0},NULL};
@@ -369,7 +370,6 @@ int main(void)
 		}
 		else if(strcmp("myrmdir",SHAf.pNext->data) == 0)
 		{
-			//	printf("1\n");
 			for(pSNode =SHAf.pNext; pSNode != NULL ; )
 			{
 				deleteSNode(&SHAf, pSNode);
@@ -377,7 +377,6 @@ int main(void)
 				if(pSNode == NULL)	{ break ; }
 				removeDirectory(&spblock, inode, dataBlock, pwd, pSNode->data);
 			}
-			//	printf("2\n");
 		}
 		else if(strcmp("mytree",SHAf.pNext->data) == 0)
 		{
@@ -399,14 +398,45 @@ int main(void)
 		}
 		else if(strcmp("cd",SHAf.pNext->data) == 0)
 		{
-			for(pSNode =SHAf.pNext; pSNode != NULL ;)
+			for(pSNode =SHAf.pNext;pSNode !=NULL;pSNode=pSNode->pNext)
+				printf("pSNode->data:%s\n",pSNode->data);
+			deleteSNode(&SHAf, SHAf.pNext);
+			pSNode = SHAf.pNext;
+			if(pSNode == NULL)		
 			{
-				deleteSNode(&SHAf, pSNode);
-				pSNode = SHAf.pNext;
-				if(strcmp(pSNode->data,"/") == 0)
-					absolutePath(inode, dataBlock, &Root, &tPwd, pSNode);
-				mycd(&pwd, &uPwd, tPwd);
+				tPwd = &Root;
+				tUwd = &Root;
 			}
+			else 
+			{
+				if(strcmp(pSNode->data,"/") == 0)
+				{
+
+
+					for(;pSNode != NULL;)
+					{
+						absolutePath(inode, dataBlock, &Root, &tPwd, pSNode);
+						deleteSNode(&SHAf, pSNode);
+						pSNode = SHAf.pNext;
+					}
+				}
+				else 
+				{
+					for(;pSNode!=NULL;)
+					{
+						relativePath(inode,&Root,&tPwd,&tUwd,dataBlock,pSNode);
+						deleteSNode(&SHAf, pSNode);
+						pSNode = SHAf.pNext;
+					}
+				}
+			}
+			mycd(&pwd, &uPwd, tPwd,tUwd);
+			idNum = pwd->idNum;
+			dbNum = inode[idNum].direct;
+			printf("pwd:%s\n",dataBlock[dbNum].directory.name[0]);
+			idNum = uPwd->idNum;
+			dbNum = inode[idNum].direct;
+			printf("uPwd:%s\n",dataBlock[dbNum].directory.name[0]);
 		}
 		else if(strcmp("byebye",SHAf.pNext->data) == 0)
 		{
