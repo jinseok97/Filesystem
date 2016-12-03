@@ -3,16 +3,25 @@
 
 int findInode(char *fileName, Data *pDB)
 {
-	/*pDB 는 현재 디렉터리의 데이터블럭*/
     int i;
     for(i = 0; i < 16; i++)
-        if(!strcmp(pDB -> directory[i][1], fileName))
-            return atoi(pDB -> directory[i][0]);
+        if(!strncmp(pDB -> directory.name[i], fileName, 4))
+            return pDB -> directory.idNum[i];
     
     return 512;
 }
 
-int prepareInode(SuperBlock *pSB, Inode *ind, int fType, int fSize/*direct*/)
+int findemptyDir_line(Data *pDB)
+{
+	for(int i = 0; i < 16; i++)
+		if(pDB -> directory.name[i][0] == 0)
+			return i;
+
+	printf("full directory\n");
+	return -1;
+}
+
+int prepareInode(SuperBlock *pSB, Inode *ind, int fType, int fSize)
 {
     int findarrNum = -1;
     int findbitNum = -1;
@@ -25,8 +34,6 @@ int prepareInode(SuperBlock *pSB, Inode *ind, int fType, int fSize/*direct*/)
     ind[indNum].fileType = fType;
     ind[indNum].fileSize = fSize;
     ind[indNum].fileTime = time(NULL);	//"filesystem.h" time_t * -> time_t로 수정
-//	ind[indNum].direct ... 지정 필요
-//	allocdbinIDdirect(pSB, ind, pData);
     
     
 /*	printf("iNode[%d]\n", indNum);
@@ -36,43 +43,87 @@ int prepareInode(SuperBlock *pSB, Inode *ind, int fType, int fSize/*direct*/)
     return indNum;
 }
 
-void cmd_judge(char cmd[][10], SuperBlock *pSB, Inode *ind, Data *pDB)
+void cmd_judge(char cmd[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {
 	if(!strcmp(cmd[0], "mytouch"))
-		f_mytouch(cmd, pSB, ind, pDB);
+		f_mytouch(cmd, pSB, ind, pDB, pwd);
+	else if(!strcmp(cmd[0], "mycp"))	
+		f_mycp(cmd, pSB, ind, pDB, pwd);
 	else if(!strcmp(cmd[0], "mycpfrom"))
-		f_mycpfrom(cmd, pSB, ind, pDB);
+		f_mycpfrom(cmd, pSB, ind, pDB, pwd);
 	else if(!strcmp(cmd[0], "mycpto"))
-		f_mycpto(cmd, pSB, ind, pDB);
+		f_mycpto(cmd, pSB, ind, pDB, pwd);
 	else if(cmd[0][0] != 'm' || cmd[0][1] != 'y')
 		f_command(cmd);
 	else
 		printf("mysh : %s : command not found\n", cmd[0]);
 
-//	else if(!strcmp(cmd[0], "mycp"))	
-//		f_mycp(cmd, pSB, ind, pDB);
 }
 
-void f_mytouch(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB)
+void f_mytouch(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {
-	printf("**mytouch call\n");
-// 	int indNum = findInode(cmd_line[1], &pDB[pwd]/*현재디렉터리*/);
-	int indNum = 512;
+//	printf("**mytouch call : ");
+	short wd = ind[pwd -> idNum].direct;
+ 	int indNum = findInode(cmd_line[1], &pDB[wd]);
     
     if(indNum == 512)
-        prepareInode(pSB, ind, 1, 0);
-		//pDB[pwd] -> directory[n][0/1]에 ind, filename 추가
+	{
+		printf("touch new file\n");
+//		printf("check : %d\n", check);
+
+		int check = findemptyDir_line(&pDB[wd]);
+		if(check == -1)		return ;
+        pDB[wd].directory.idNum[check] = prepareInode(pSB, ind, 1, 0);
+		for(int i = 0; i < 4; i++)				
+			pDB[wd].directory.name[check][i] = cmd_line[1][i];
+
+		ind[indNum].direct = -1;
+		ind[indNum].sindirect = -1;
+		ind[indNum].dlindirect = -1;
+	}
     else
+	{
+		printf("touch old file\n");
         ind[indNum].fileTime = time(NULL);
+	}
+//	printf("indNum = %d\n", pDB[wd].directory.idNum[check]);
 }
 
-void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB)
+void f_mycp(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
+{
+	short wd = ind[pwd -> idNum].direct;
+	int indNum1 = findInode(cmd_line[1], &pDB[wd]);
+	if(indNum1 == 512)
+	{
+		printf("'%s' is not found.\n", cmd_line[1]);
+		return ;
+	}
+
+	int indNum2 = findInode(cmd_line[2], &pDB[wd]);
+	if(indNum2 == 512)
+	{
+		int check = findemptyDir_line(&pDB[wd]);
+		if(check == -1)		return ;
+		indNum2 = prepareInode(pSB, ind, ind[indNum1].fileType, ind[indNum1].fileSize);	
+		pDB[wd].directory.idNum[check] = indNum2;
+		for(int i = 0; i < 4; i++)				
+			pDB[wd].directory.name[check][i] = cmd_line[2][i];
+	}
+	else
+	{
+		ind[indNum2].fileSize = ind[indNum1].fileSize;
+		ind[indNum2].fileTime = time(NULL);
+	}
+
+	//데이터블럭 복사//
+}
+
+void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {								//mycpfrom orig_fs.file my_fs.file
 	printf("**mycpfrom call\n");
+	short wd = ind[pwd -> idNum].direct;
+	int DBnum;
     FILE *ifp;
-    int fileSize = 0;
-    char c;
-    
     ifp = fopen(cmd_line[1], "r");
     if(ifp == NULL)
     {
@@ -80,31 +131,57 @@ void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB)
         fclose(ifp);
         return ;
     }
-    
-    while(1)
+
+	int indNum = findInode(cmd_line[2], &pDB[wd]);
+	if(indNum == 512)
+	{
+		int check = findemptyDir_line(&pDB[wd]);
+		if(check == -1)		return ;
+		indNum = prepareInode(pSB, ind, 1, 0);
+		pDB[wd].directory.idNum[check] = indNum;
+		for(int i = 0; i < 4; i++)
+			pDB[wd].directory.name[check][i] = cmd_line[2][i];
+	}
+
+    char c;
+	int flag;
+    for(int i = 0; (c = getc(ifp)) != EOF; i++)
     {
-        if((c = getc(ifp)) == EOF)	break;
-        fileSize++;
-    }
-    
-    prepareInode(pSB, ind, 1, fileSize);
-    
+		if(i % 128 == 0)
+		{
+			flag = allocdbinIDdirect(pSB, ind, pDB);
+
+			if(flag == 1)
+				flag = allocdbinIDdlindirect(pSB, ind, pDB);
+
+			if(flag == 1)
+			{
+				flag = allocdbinIDdlindirect(pSB, ind, pDB);
+				if(isBreak(flag))	break;
+			}
+		}
+		DBnum = readDbNuminID(ind, pDB, i / 128 + 1);
+		printf("DBnum : %d\n", DBnum);
+		pDB[DBnum].file[i % 128] = c;
+	}
+
+
     fclose(ifp);
 }
 
-void f_mycpto(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB)
+void f_mycpto(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {								//mycpto my_fs.file orig_fs.file
 	printf("**mycpto call\n");
+	short wd = ind[pwd -> idNum].direct;
+	int indNum = findInode(cmd_line[1], &pDB[wd]);
 	FILE *ofp;
-/*	int indNum = findInode(cmd_line[1], &pDB[pwd]);
 	if(indNum != 512)
 	{
-		fopen(ofp, cmd_line[2], "w");
-		//데이터 링크드리스트 출력//	
-			fprintf(ofp, "%s", pDB[NUM].file);
+		ofp = fopen(cmd_line[2], "w");
+		fprintf(ofp, "datablock linkedlist\n");
 		fclose(ofp);
 	}
-	else	*/
+	else	
 		printf("'%s' is not found.\n", cmd_line[1]);
 }
 

@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifndef __file_system_
 #define __file_system_
@@ -26,10 +27,16 @@ typedef struct tagInode Inode;
 
 typedef struct tagDNode DNode ;
 
+typedef struct tagDirectory
+{
+	char name[16][4];
+	int idNum[16];
+}Directory;
+
 union tagData
 {
 	char file[DS];
-	char directory[16][2][4];
+	Directory directory;
 	long long dataArr[BAN];
 };
 
@@ -47,6 +54,23 @@ struct tagDNode
 {
 	Data *pData;
 	DNode *pNext;
+};
+
+typedef struct tagTNode TNode; 
+
+struct tagTNode 
+{
+	TNode *pPrev;
+	long long idNum;
+	TNode *pNext;
+};
+
+typedef struct tagSNode SNode;
+
+struct tagSNode
+{
+	char data[20];
+	SNode *pNext;
 };
 
 
@@ -118,4 +142,26 @@ void insertDBNode(DNode **, DNode *);
 void deleteDBNode(DNode *, DNode **);
 
 DNode *findDBPrevNode(DNode *, DNode *);
+
+TNode *createTNode(long long);
+
+void insertleftTNode(TNode *, TNode *);
+
+void deleteTNodeNext(TNode *pPrev, TNode *pRemo);
+
+void deleteTNodePrev(TNode *pPrev, TNode *pRemo);
+
+void saveNuminTNode(TNode *pTNode, long long idNum);
+
+long long getNumfromTNode(TNode *pTNode);
+
+void deleteTNode(TNode *pPrev, TNode *pRemo);
+
+SNode *createSNode(void);
+
+void pushSNodetoStack(SNode *pHead, SNode *pSNode);
+
+void savedatatoSNode(SNode *pSNode, char c, int index);
+
+void deleteSNode(SNode *pHead, SNode *pRemo);
 #endif

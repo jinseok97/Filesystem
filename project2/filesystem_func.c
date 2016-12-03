@@ -399,7 +399,7 @@ int allocdbinIDdlindirect(SuperBlock *pSb, Inode *pInode, Data *pData)
 		directIndex = readbitArr(pData + pInode->dlindirect, k);
 		allocbitDbtoDr(pData+directIndex , dbNum);
 		if((pInode->fileSize)/128 == 205)
-			printf("dbNum:%d\n",dbNum);
+			printf("dbNum:%lld\n",dbNum);
 	}
 
 	if(((pInode->fileSize)/128-103/*105*/)%102/*103*/ != 0)
