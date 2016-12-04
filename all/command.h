@@ -1,5 +1,17 @@
+/******************************************************
+ make 명령으로 컴파일
+ gcc -o my_shell main.c filesystem_func.c commandfunc.c
+ ******************************************************/
+
 #include "filesystem.h"
 #include <string.h>
+
+#ifdef NOFILE
+	#undef NOFILE
+	#define NOFILE 512
+#endif
+
+#define	DEBUG	1
 
 int prepareInode(SuperBlock *, Inode *, int, int);
 int findInode(char *fileName, Data *pDB);

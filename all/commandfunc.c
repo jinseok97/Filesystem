@@ -1,6 +1,7 @@
 #include "command.h"
 #include "filesystem.h"
 
+//파일명을 받아 해당 디렉터리파일에서 아이노드 번호 리턴
 int findInode(char *fileName, Data *pDB)
 {
     int i;
@@ -8,9 +9,10 @@ int findInode(char *fileName, Data *pDB)
         if(!strncmp(pDB -> directory.name[i], fileName, 4))
             return pDB -> directory.idNum[i];
     
-    return 512;
+    return 512;		//indnum : 0 ~ 511
 }
 
+//해당 디렉터리 파일의 빈 행을 찾아 리턴
 int findemptyDir_line(Data *pDB)
 {
 	for(int i = 0; i < 16; i++)
@@ -21,6 +23,7 @@ int findemptyDir_line(Data *pDB)
 	return -1;
 }
 
+//사용가능한 아이노드를 찾아 표시하고 초기화(타입, 크기, 시간) & 아이노드 번호 리턴
 int prepareInode(SuperBlock *pSB, Inode *ind, int fType, int fSize)
 {
     int findarrNum = -1;
@@ -53,13 +56,6 @@ void cmd_judge(char cmd[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pw
 		f_mycpfrom(cmd, pSB, ind, pDB, pwd);
 	else if(!strcmp(cmd[0], "mycpto"))
 		f_mycpto(cmd, pSB, ind, pDB, pwd);
-	else if(cmd[0][0] >= '0' && cmd[0][0] <= '9')
-	{	//아이노드검사
-		int i = atoi(cmd[0]);
-		printf("			INODE PRINT\n	[#%d IND] ", i);
-		printf("Type : %d | Size : %d | Time : %d\n", ind[i].fileType, ind[i].fileSize, ind[i].fileTime);
-		printBit(pSB -> usableInode[i / 64]);
-	}
 	else if(cmd[0][0] != 'm' || cmd[0][1] != 'y')
 		f_command(cmd);
 	else
@@ -75,7 +71,7 @@ void f_mytouch(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNod
     
     if(indNum == 512)
 	{
-		printf("touch new file\n");
+//		printf("touch new file\n");
 //		printf("check : %d\n", check);
 
 		int check = findemptyDir_line(&pDB[wd]);
@@ -90,7 +86,7 @@ void f_mytouch(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNod
 	}
     else
 	{
-		printf("touch old file\n");
+//		printf("touch old file\n");
         ind[indNum].fileTime = time(NULL);
 	}
 //	printf("indNum = %d\n", pDB[wd].directory.idNum[check]);
@@ -98,6 +94,7 @@ void f_mytouch(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNod
 
 void f_mycp(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {
+	printf("'mycp' call");
 	short wd = ind[pwd -> idNum].direct;
 	int indNum1 = findInode(cmd_line[1], &pDB[wd]);
 	if(indNum1 == 512)
@@ -123,13 +120,22 @@ void f_mycp(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *
 	}
 
 	//데이터블럭 복사//
+//	if(ind[indNum1].sindirect == -1)	//direct만 존재할 때
+	{
+		printf(": direct copy\n");
+		int i, j, DBnum;
+		findusabledataBlock(pSB -> usabledataBlock, &i, &j);
+		markdataBlock(pSB -> usabledataBlock, i, j);
+    	DBnum = i * 64 + j - 1;
+		strncpy(pDB[DBnum].file, pDB[ind[indNum1].direct].file, 128); //수정해야
+	}
 }
 
 void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {								//mycpfrom orig_fs.file my_fs.file
-	printf("**mycpfrom call\n");
+	printf("'mycpfrom' call\n");
 	short wd = ind[pwd -> idNum].direct;
-	int DBnum;
+
     FILE *ifp;
     ifp = fopen(cmd_line[1], "r");
     if(ifp == NULL)
@@ -151,9 +157,10 @@ void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNo
 	}
 
     char c;
-	int flag;					//수정이 필요(데이터블럭할당)
+	int flag, DBnum;					//수정이 필요(데이터블럭할당)
     for(int i = 0; (c = getc(ifp)) != EOF; i++)
     {
+		putchar(c);
 		if(i % 128 == 0)
 		{
 			flag = allocdbinIDdirect(pSB, ind, pDB);
@@ -168,8 +175,8 @@ void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNo
 			}
 		}
 		DBnum = readDbNuminID(ind, pDB, i / 128 + 1);
-		printf("DBnum : %d\n", DBnum);
 		pDB[DBnum].file[i % 128] = c;
+		printf(" DBnum : %d\n", DBnum);
 	}
 
 
@@ -178,14 +185,15 @@ void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNo
 
 void f_mycpto(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {								//mycpto my_fs.file orig_fs.file
-	printf("**mycpto call\n");
+	printf("'mycpto' call\n");
 	short wd = ind[pwd -> idNum].direct;
 	int indNum = findInode(cmd_line[1], &pDB[wd]);
 	FILE *ofp;
 	if(indNum != 512)
 	{
 		ofp = fopen(cmd_line[2], "w");
-		fprintf(ofp, "datablock linkedlist\n");	//데이터블럭 링크드리스트 출력
+		fprintf(ofp, "datablock linkedlist\n");	
+		//데이터블럭 링크드리스트 출력만 하면 됨
 		fclose(ofp);
 	}
 	else	
