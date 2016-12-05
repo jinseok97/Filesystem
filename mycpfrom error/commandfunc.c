@@ -1,6 +1,15 @@
 #include "command.h"
 #include "filesystem.h"
 
+void storeDatainBlock(Inode *pInode, Data *pData, char c)
+{
+	int dbNum;
+	dbNum = readDbNuminID(pInode, pData, (pInode -> fileSize) / 128);
+//	printBit(pData[2].dataArr[0]);
+	pData[dbNum].file[(pInode -> fileSize) % 128] = c;
+	pInode -> fileSize += 1;
+}
+
 //파일명을 받아 해당 디렉터리파일에서 아이노드 번호 리턴
 int findInode(char *fileName, Data *pDB)
 {
@@ -60,7 +69,6 @@ void cmd_judge(char cmd[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pw
 		f_command(cmd);
 	else
 		printf("mysh : %s : command not found\n", cmd[0]);
-
 }
 
 void f_mytouch(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
@@ -76,9 +84,9 @@ void f_mytouch(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNod
 
 		int check = findemptyDir_line(&pDB[wd]);
 		if(check == -1)		return ;
-        pDB[wd].directory.idNum[check] = prepareInode(pSB, ind, 1, 0);
-		for(int i = 0; i < 4; i++)				
-			pDB[wd].directory.name[check][i] = cmd_line[1][i];
+
+        pDB[wd].directory.idNum[check] = indNum = prepareInode(pSB, ind, 1, 0);
+		strncpy(pDB[wd].directory.name[check], cmd_line[1], 4);
 
 		ind[indNum].direct = -1;
 		ind[indNum].sindirect = -1;
@@ -120,7 +128,7 @@ void f_mycp(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *
 	}
 
 	//데이터블럭 복사//
-//	if(ind[indNum1].sindirect == -1)	//direct만 존재할 때
+	if(ind[indNum1].sindirect == -1)	//direct만 존재할 때
 	{
 		printf(": direct copy\n");
 		int i, j, DBnum;
@@ -157,16 +165,15 @@ void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNo
 	}
 
     char c;
-	int flag, DBnum;					//수정이 필요(데이터블럭할당)
-    for(int i = 0; (c = getc(ifp)) != EOF; i++)
+	int flag, DBnum, i;					//수정이 필요(데이터블럭할당)
+    while(( fscanf(ifp,"%c",&c)) != EOF)
     {
-		putchar(c);
-		if(i % 128 == 0)
+		if(((ind + indNum) -> fileSize) % 128 == 0)
 		{
 			flag = allocdbinIDdirect(pSB, &ind[indNum], pDB);
 
 			if(flag == 1)
-				flag = allocdbinIDdlindirect(pSB, &ind[indNum], pDB);
+				flag = allocdbinIDdlindirect(pSB, ind+indNum, pDB);
 
 			if(flag == 1)
 			{
@@ -174,11 +181,26 @@ void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNo
 				if(isBreak(flag))	break;
 			}
 		}
-		DBnum = readDbNuminID(ind, pDB, i / 128 + 1);
-		pDB[DBnum].file[i % 128] = c;
-		printf(" DBnum : %d\n", DBnum);
-	}
+		storeDatainBlock(&ind[indNum], pDB, c);
+//	putchar(c);
 
+		i++;
+	}
+	
+	putchar('*');
+	printf("\n0 : ");
+	for(int i = 0; i < 128; i++)
+		printf("%c", pDB[0].file[i]);
+	printf("\n1 : ");
+	for(int i = 0; i < 128; i++)
+		printf("%c", pDB[1].file[i]);
+	printf("\n2 : ");
+	for(int i = 0; i < 128; i++)
+		printf("%c", pDB[2].file[i]);
+	printf("\n3 : ");
+	for(int i = 0; i < 128; i++)
+		printf("%c", pDB[3].file[i]);
+	
 
     fclose(ifp);
 }
