@@ -12,8 +12,6 @@ int main(void)
 	markInode(spBlock.usableInode, 0, 1);
 	markdataBlock(spBlock.usabledataBlock, 0, 1);
 	inode[0].direct = 0;
-	dataBlock[0].directory.name[0][0] = '/';
-	dataBlock[0].directory.idNum[0]= 0;
 	TNode Root = {NULL, 0, NULL};
 	TNode *pwd = &Root;
 
@@ -33,16 +31,24 @@ int main(void)
 			printf("			INODEPRINT\n");
 			for(int i = 0; i < 10; i++)
 			{
-				printf("	[#%d IND] ", i);
+				printf("   [#%d IND] ", i);
 				printf("Type : %d | ", inode[i].fileType);
-				printf("Size : %d | ", inode[i].fileSize);
+				printf("Size : %3d | ", inode[i].fileSize);
+				printf("DB : %d", inode[i].direct);
+				printf(" %d", inode[i].sindirect);
+				printf(" %d |", inode[i].dlindirect);
 				printf("Time : %ld\n", inode[i].fileTime);
 			}
 			printf("	  	      ROOTDIRECTORY\n");
 			for(int i = 0; i < 10; i++)
 			{
 				printf("		    %4d", dataBlock[0].directory.idNum[i]);
-				printf("      %4s\n", dataBlock[0].directory.name[i]);
+				printf("      ");
+				for(int j = 0; j < 4; j++)
+				{
+					printf("%c", dataBlock[0].directory.name[i][j]);
+				}
+				putchar('\n');
 			}
 			printBit(spBlock.usableInode[0]);
 			printBit(spBlock.usabledataBlock[0]);

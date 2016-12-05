@@ -312,11 +312,9 @@ int preparedataBlock(Data *pData,long long *usabledataBlock,long long *dbNum)
 	markdataBlock(usabledataBlock, findarrNum, findbitNum);
 
 	(*dbNum) = findarrNum * 64 + findbitNum - 1 ;
-	//printf("dbNum:%d\n",*dbNum);
+	
 
 	initDataBlock(pData+(*dbNum));
-	//for(int i=0;i<16;i++)
-	//printBit(pData + (*dbNum));
 
 	return 0;
 }
@@ -333,6 +331,7 @@ int allocdbinIDdirect(SuperBlock *pSb, Inode *pInode, Data *pData)
 	if(flag == 2)	{ return flag ; }
 
 	pInode->direct = (short) dbNum;
+	//printf("%d\n",pInode->direct);
 	//pInode->fileSize += 128;
 
 	return flag;
@@ -340,27 +339,41 @@ int allocdbinIDdirect(SuperBlock *pSb, Inode *pInode, Data *pData)
 
 int allocdbinIDsindirect(SuperBlock *pSb, Inode *pInode, Data *pData)
 {
+	printf("1\n");
 	int flag = 0;
 	long long dbNum;
 	bool Doprepare = 0;
 	if(pInode->fileSize/128 < 1)	{ return 3; }	
 	if(pInode->fileSize/128 >= 103/*104*/)	{ return 1; }
+
+	printf("2\n");
 	if(pInode->fileSize/128 == 1)
 	{
+	printf("3\n");
+		//printf("beforedbNum:%lld\n",dbNum);
 		flag = preparedataBlock(pData,pSb->usabledataBlock, &dbNum);
+		printf("SinD:dbNum:%d\n",dbNum);
+		//printf("afterdbNum:%lld\n",dbNum);
 
 		if(flag == 2)	{ return flag; }
 		pInode->sindirect = (short) dbNum;
 		//pInode->fileSize += 128 ;
 	}
+	printf("4\n");
 
 	flag = preparedataBlock(pData,pSb->usabledataBlock, &dbNum);
+	printf("5\n");
+		printf("SinD:dbNum:%d\n",dbNum);
 
 	if(flag == 2)	{ return flag; }
+	printf("6\n");
 
 	allocbitDbtoDr(pData + pInode->sindirect, dbNum);
+	printf("7\n");
 
-
+/*	for(int i=0;i<16;i++)
+		printBit(pData[pInode->sindirect].dataArr[i]);
+*/
 	//pInode->fileSize += 128 ;
 
 	return flag;
@@ -373,7 +386,6 @@ int allocdbinIDdlindirect(SuperBlock *pSb, Inode *pInode, Data *pData)
 	long long dbNum;
 	int directIndex;
 	static int k = 0;
-	int abc;
 
 	if(pInode->fileSize/128 < 103)		{ return 3 ; }
 	if(pInode->fileSize/128 > 10507/*10611*/)	{ return 1 ; }
@@ -388,21 +400,19 @@ int allocdbinIDdlindirect(SuperBlock *pSb, Inode *pInode, Data *pData)
 
 	if(((pInode->fileSize)/128 - 103/*105*/)%102/*103*/ == 0 )
 	{
-		printf("fileSize:%d\n",pInode->fileSize/128);
 		flag = preparedataBlock(pData, pSb->usabledataBlock, &dbNum);
 		if(flag == 2)	{ return flag; }
 		allocbitDrtoSin(pData + pInode->dlindirect, dbNum);
 
 		flag = preparedataBlock(pData, pSb->usabledataBlock, &dbNum);
 		if(flag == 2)	{ return flag; }
-			k++;
+		k++;
 		directIndex = readbitArr(pData + pInode->dlindirect, k);
 		allocbitDbtoDr(pData+directIndex , dbNum);
-		if((pInode->fileSize)/128 == 205)
-			printf("dbNum:%lld\n",dbNum);
+
 	}
 
-	if(((pInode->fileSize)/128-103/*105*/)%102/*103*/ != 0)
+	if(((pInode->fileSize)/128-103/*105*/)%102 != 0)
 	{
 		flag = preparedataBlock(pData, pSb->usabledataBlock, &dbNum);
 		if(flag == 2)	{ return flag; }
@@ -427,7 +437,6 @@ long long readDireinSin(Data *pData, long long SinD,int k)
 	long long dbNum;
 
 	dbNum = readbitArr(pData+SinD, k);
-	//	printf("dbNum:%d\n",dbNum);
 }
 
 long long readIDSinD(Inode *pInode, Data *pData, int k)
@@ -445,10 +454,7 @@ long long readSinDinDlin(Data *pData, long long Dlin,int k)
 	long long SinD = readbitArr(pData+Dlin, k/102 + 1);
 	long long dbNum;
 
-	//	printf("SinD:%d\n",SinD);
-	//	printf("k:%d\n",k);
 	dbNum = readDireinSin(pData, SinD, k%102 + 1);
-	//	printf("dbNum:%d\n",dbNum);
 
 	return dbNum;
 
@@ -459,7 +465,7 @@ long long readIDDlin(Inode *pInode, Data *pData, int k)
 	long long Dlin = pInode->dlindirect;
 	long long dbNum;
 
-	dbNum = readSinDinDlin(pData, Dlin, k - 103 /*-1*/);
+	dbNum = readSinDinDlin(pData, Dlin, k - 103 );
 
 	return dbNum;
 }
@@ -467,12 +473,13 @@ long long readIDDlin(Inode *pInode, Data *pData, int k)
 long long readDbNuminID(Inode *pInode ,Data *pData, int allocIndex)
 {
 	long long dbNum;
+
 	if(allocIndex == 0)
 		dbNum = readIDDire(pInode);
 	if((allocIndex >= 1) && (allocIndex <=102))
 		dbNum=readIDSinD(pInode, pData, allocIndex);
 	if((allocIndex >= 103) && (allocIndex <=10507))
-		dbNum=readIDDlin(pInode, pData, allocIndex );
+		dbNum=readIDDlin(pInode, pData, allocIndex);
 
 	return dbNum;
 }
@@ -513,4 +520,95 @@ DNode *findDBPrevNode(DNode *pHead, DNode *pFind)
 		if(pDNode->pNext == pFind)	{	return pDNode ; }
 }
 
+TNode *createTNode(long long idNum)
+{
+	TNode *pTNode = (TNode *) malloc(sizeof(TNode));
 
+	pTNode->pPrev = NULL;
+	pTNode->idNum = idNum;
+	pTNode->pNext = NULL;
+
+	return pTNode;
+}
+
+void insertleftTNode(TNode *pMain, TNode *pSub)
+{
+	if(pMain->pPrev != NULL)
+		pSub->pNext = pMain->pPrev;
+
+	pMain->pPrev = pSub;
+}
+/*
+void insertrightTNode(TNode *pMain, TNode *pSub)
+{
+	if(pMain->pNext != NULL)		{  return ; }
+
+	pMain->pNext = pSub;
+}
+*/
+void deleteTNodeNext(TNode *pPrev, TNode *pRemo)
+{
+	pPrev->pNext = pRemo->pNext ;
+
+	free(pRemo);
+}
+
+void deleteTNodePrev(TNode *pPrev, TNode *pRemo)
+{
+	pPrev->pPrev = pRemo->pNext ;
+
+	free(pRemo);
+}
+
+void saveNuminTNode(TNode *pTNode, long long idNum)
+{
+	int i=0;
+
+		pTNode->idNum = idNum;
+
+}
+
+long long getNumfromTNode(TNode *pTNode)
+{
+	return pTNode->idNum;
+}
+
+void deleteTNode(TNode *pPrev, TNode *pRemo)
+{
+	if(pPrev->pPrev == pRemo)
+		deleteTNodePrev(pPrev, pRemo);
+
+	if(pPrev->pNext == pRemo)
+		deleteTNodeNext(pPrev, pRemo);
+}
+
+SNode *createSNode(void)
+{
+	SNode *pSNode = (SNode *) malloc(sizeof(SNode));
+
+	*pSNode = (struct tagSNode) {.data={0}};
+	pSNode->pNext = NULL;
+
+	return pSNode;
+}
+
+void pushSNodetoStack(SNode *pHead, SNode *pSNode)
+{
+	pSNode->pNext = pHead->pNext;
+	pHead->pNext  = pSNode; 
+}
+
+void savedatatoSNode(SNode *pSNode, char c, int index)
+{
+	pSNode->data[index] = c;
+}	
+
+void deleteSNode(SNode *pHead, SNode *pRemo)
+{
+//	printf("pHead->pNext:%s\n",pHead->pNext->data);
+//	printf("pRemo:%s\n",pRemo->data);
+	pHead->pNext = pRemo->pNext;
+//	printf("pHead->pNext:%p\n",pHead->pNext->data);
+
+	free(pRemo);
+}

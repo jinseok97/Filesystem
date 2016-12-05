@@ -11,8 +11,9 @@
 	#define NOFILE 512
 #endif
 
-#define	DEBUG	1
+#define	DEBUG	0
 
+void storeDatainBlock(Inode *, Data *, char);
 int prepareInode(SuperBlock *, Inode *, int, int);
 int findInode(char *fileName, Data *pDB);
 int findemptyDir_line(Data *);
