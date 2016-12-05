@@ -45,7 +45,7 @@ int prepareInode(SuperBlock *pSB, Inode *ind, int fType, int fSize)
     
     ind[indNum].fileType = fType;
     ind[indNum].fileSize = fSize;
-    ind[indNum].fileTime = time(NULL);	//"filesystem.h" time_t * -> time_t로 수정
+    ind[indNum].time = time(NULL);	//"filesystem.h" time_t * -> time_t로 수정
     
     
 /*	printf("iNode[%d]\n", indNum);
@@ -95,7 +95,7 @@ void f_mytouch(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNod
     else
 	{
 //		printf("touch old file\n");
-        ind[indNum].fileTime = time(NULL);
+        ind[indNum].time = time(NULL);
 	}
 //	printf("indNum = %d\n", pDB[wd].directory.idNum[check]);
 }
@@ -124,7 +124,7 @@ void f_mycp(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *
 	else
 	{
 		ind[indNum2].fileSize = ind[indNum1].fileSize;
-		ind[indNum2].fileTime = time(NULL);
+		ind[indNum2].time = time(NULL);
 	}
 
 	//데이터블럭 복사//
@@ -166,19 +166,20 @@ void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNo
 
     char c;
 	int flag, DBnum, i;					//수정이 필요(데이터블럭할당)
-    while(( fscanf(ifp,"%c",&c)) != EOF)
+    while((c = fgetc(ifp)) != EOF)
     {
+		printf("ind[indNum].fileSize:%d\n",ind[indNum].fileSize);
 		if(((ind + indNum) -> fileSize) % 128 == 0)
 		{
 			flag = allocdbinIDdirect(pSB, &ind[indNum], pDB);
 
 			if(flag == 1)
-				flag = allocdbinIDdlindirect(pSB, ind+indNum, pDB);
+				flag = allocdbinIDsindirect(pSB, ind+indNum, pDB);
 
 			if(flag == 1)
 			{
 				flag = allocdbinIDdlindirect(pSB, &ind[indNum], pDB);
-				if(isBreak(flag))	break;
+				if(isBreak(flag))	{break;}
 			}
 		}
 		storeDatainBlock(&ind[indNum], pDB, c);

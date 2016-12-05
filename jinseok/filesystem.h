@@ -43,7 +43,7 @@ union tagData
 struct tagInode
 {
 	int fileType;
-	time_t fileTime;
+	time_t time;
 	int fileSize;
 	short direct;			//strData 사용	 	
 	short sindirect;		//datatArr[BAN] 사용 
