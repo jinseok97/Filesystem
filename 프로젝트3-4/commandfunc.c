@@ -16,9 +16,13 @@ int findInode(char *fileName, Data *pDB)
 int findemptyDir_line(Data *pDB)
 {
 	for(int i = 0; i < 16; i++)
-		if(pDB -> directory.name[i][0] == -1)
+	{
+			printf("idNum:%d\n",pDB->directory.idNum[i]);
+		if(pDB -> directory.idNum[i]<=0 || pDB -> directory.idNum[i]<0 )
+		{
 			return i;
-
+		}
+	}
 	printf("full directory\n");
 	return -1;
 }

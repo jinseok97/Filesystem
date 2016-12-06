@@ -59,6 +59,18 @@ void initDirectory(Inode *pInode, Data *pData, long long idNum, TNode *Pwd, char
 	pData[Dire].directory = (struct tagDirectory){{[1]=".."},{[1]=Pwd->idNum}};
 
 }
+void initFile(Inode *pInode, Data *pData, long long idNum, TNode *Pwd, char *name)
+{
+	//int Dire = (int) pInode[idNum].direct;
+
+	pInode[idNum].fileType = 0;
+	pInode[idNum].time = time(NULL);
+	pInode[idNum].fileSize = 0; 
+	//pData[Dire].directory.idNum[0]= idNum;
+	//pData[Dire].directory = (struct tagDirectory){{[1]=".."},{[1]=Pwd->idNum}};
+
+}
+
 
 int confirminfoPwd(Inode *pInode, /*Data *pData,*/TNode *Pwd)
 {
@@ -141,7 +153,7 @@ void makeDirectory(SuperBlock *pSb, Inode *pInode, Data *pData, TNode *Pwd, char
 			if(isBreak(flag))	{	return;   }
 		}
 	}
-	for(int i=0;i<=(pInode->fileSize)/128;i++)
+	for(int i=0;i<=(pInode[idNum].fileSize)/128;i++)
 	{
 		dbNum=readDbNuminID(pInode+Pwd->idNum, pData, i);
 		pDNode = createDBNode(pData + dbNum);
@@ -189,6 +201,135 @@ void makeDirectory(SuperBlock *pSb, Inode *pInode, Data *pData, TNode *Pwd, char
 
 
 }
+void rm(SuperBlock *pSb,Inode *pInode, Data *pData,TNode *Pwd, char *name)
+{
+	long long idNum = Pwd->idNum;
+	long long tmpidNum;
+	long long Remo;
+	long long dbNum;
+	long long predbNum;
+	char tmp[4];
+	int i;
+	int j;
+	int start;
+	int end;
+	int flag=0;
+	int l;
+	int tmpfileSize ;
+	int index = 0;
+	tmpfileSize = pInode[idNum].fileSize ;
+
+	TNode *pTNode = NULL ;
+	TNode *pPrev = NULL;
+
+	DNode Head = {NULL,NULL};
+	DNode *pTail = &Head;
+	DNode *pDNode = NULL;
+	DNode *pDPrev = NULL;
+
+	for(int i=0;i<=(pInode[idNum].fileSize)/128;i++)
+	{
+		dbNum=readDbNuminID(pInode+idNum, pData, i);
+		pDNode = createDBNode(pData + dbNum);
+		insertDBNode(&pTail, pDNode);
+	}
+	for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext)
+	{
+		if(pIndex == Head.pNext)
+			start = 2;
+		else 
+			start = 0;
+
+		end = ((tmpfileSize)>128) ? 128/8 : (tmpfileSize)/8 ;
+		printf("idNum:%d\n",idNum);
+		for(i=start;i<end;i++)
+		{
+			
+			printf("name:%s\n",name);
+			if(strcmp(pIndex->pData->directory.name[i],name) == 0)
+			{
+				tmpidNum = pIndex->pData->directory.idNum[i];
+				if(pInode[tmpidNum].fileType == 1)
+				{
+					flag = 2;
+					break;
+					//printf("디렉터리입니다.\n");
+					//return ;
+				}
+
+				flag = 1;
+				break;
+			}
+		}
+		if((flag == 1) || (flag == 2))
+			break;
+		if(tmpfileSize>=128)
+			tmpfileSize -= 128;
+	}
+
+	if(flag == 0)	
+	{
+		printf("존재 하지 않는 파일입니다.\n");
+		return ;
+	}
+	if(flag == 2)
+	{
+		printf("디렉터리 입니다.\n");
+		return ;
+	}
+	//pInode[idNum].fileSize -= 8;
+	Remo = pData[dbNum].directory.idNum[i];					//지우고자 하는 디렉터리의 아이노드 번호
+	pInode[idNum].fileSize -= 8;
+//	unmarkInode(pSb->usableInode, Remo/64, (Remo + 1) %64);	//지우고자 하는 디렉터리에 할당된 데이터블럭 할당 해제
+
+	for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext,index++)
+	{
+		if(pIndex == Head.pNext)
+			pDPrev = pIndex ;
+
+		if(index < ((pInode[idNum].fileSize+8)-tmpfileSize)/128)
+			continue;
+		else if(index == ((pInode[idNum].fileSize+8)-tmpfileSize)/128)
+			j=i;
+		else 
+			j=0;
+
+		end = (((pInode[idNum].fileSize+8)-128*index)>128) ? 128/8 : ((pInode[idNum].fileSize+8)-128*index)/8 ;
+		for(j;j<end;j++)
+		{
+			if(index==0 && j<=2)
+				continue;
+			else if(index>=1 && j==0)
+				strcpy(pDPrev->pData->directory.name[15], pIndex->pData->directory.name[j]);
+			else if(j == end-1)
+			{
+				for(int i=0;i<4;i++)
+					pIndex->pData->directory.name[j][i]=' ';
+			}
+			else 
+				strcpy(pIndex->pData->directory.name[j], pIndex->pData->directory.name[j+1]);
+
+
+		}
+		pDPrev = pIndex ;
+
+	}
+
+//	pPrev = Pwd;
+/*	for(pTNode=Pwd->pPrev;pTNode != NULL;pTNode=pTNode->pNext)
+	{
+		if(pTNode->idNum == idNum)
+		{
+			if(pTNode == Pwd->pPrev)
+				deleteTNodePrev(pPrev, pTNode);
+			else
+				deleteTNodeNext(pPrev, pTNode);
+			break;
+		}
+		pPrev = pTNode;
+	}
+*/
+}
 
 void removeDirectory(SuperBlock *pSb,Inode *pInode, Data *pData,TNode *Pwd, char *name)
 {
@@ -215,9 +356,9 @@ void removeDirectory(SuperBlock *pSb,Inode *pInode, Data *pData,TNode *Pwd, char
 	DNode *pDNode = NULL;
 	DNode *pDPrev = NULL;
 
-	for(int i=0;i<=(pInode->fileSize)/128;i++)
+	for(int i=0;i<=(pInode[idNum].fileSize)/128;i++)
 	{
-		dbNum=readDbNuminID(pInode, pData, i);
+		dbNum=readDbNuminID(pInode+idNum, pData, i);
 		pDNode = createDBNode(pData + dbNum);
 		insertDBNode(&pTail, pDNode);
 	}
@@ -233,7 +374,6 @@ void removeDirectory(SuperBlock *pSb,Inode *pInode, Data *pData,TNode *Pwd, char
 		{
 			if(strcmp(pIndex->pData->directory.name[i],name) == 0)
 			{
-				printf("i:%d\n",i);
 				flag = 1;
 				break;
 			}
@@ -249,8 +389,14 @@ void removeDirectory(SuperBlock *pSb,Inode *pInode, Data *pData,TNode *Pwd, char
 		printf("존재 하지 않는 디렉터리입니다.\n");
 		return ;
 	}
-	pInode[idNum].fileSize -= 8;
+	//pInode[idNum].fileSize -= 8;
 	Remo = pData[dbNum].directory.idNum[i];					//지우고자 하는 디렉터리의 아이노드 번호
+	if(pInode[Remo].fileType != 1)		
+	{
+		printf("%s는 디렉터리가 아닙니다.\n",name);
+		return ;
+	}
+	pInode[idNum].fileSize -= 8;
 	unmarkInode(pSb->usableInode, Remo/64, (Remo + 1) %64);	//지우고자 하는 디렉터리에 할당된 데이터블럭 할당 해제
 
 	for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext,index++)
@@ -486,7 +632,6 @@ void relativePath(Inode *pInode, TNode *pRoot, TNode **tPwd, TNode **tUwd, Data 
 			{
 				if(strcmp(pIndex->pData->directory.name[j],pSNode->data)==0)
 				{
-					printf("pIndex->pData->directory.name[j]:%s\n",pIndex->pData->directory.name[j]);
 					idNum = pIndex->pData->directory.idNum[j];
 					flag = 1;
 					break;
@@ -583,6 +728,7 @@ void myls(Inode *pInode, Data *pData, TNode *tPwd, int flag )
 	NameList *pNameList = NULL;
 	NameList *pNameTail = &NameHead;
 	NameList *tpTail;
+	NameList *pPrev;
 
 	char tmpName[4];
 	int tmpNum;
@@ -592,7 +738,9 @@ void myls(Inode *pInode, Data *pData, TNode *tPwd, int flag )
 	DNode *pDNode = NULL;
 	DNode *pIndex = NULL;
 
-	for(i=0;i<=(pInode->fileSize-1)/128;i++)
+	//	printf("idNum:%d\n",idNum);
+	//	printf("pInode[idNum].fileSize:%d\n",tmpfileSize);
+	for(i=0;i<=(pInode[idNum].fileSize-1)/128;i++)
 	{
 		dbNum=readDbNuminID(pInode+idNum, pData, i);
 		pDNode = createDBNode(pData + dbNum);
@@ -600,24 +748,33 @@ void myls(Inode *pInode, Data *pData, TNode *tPwd, int flag )
 		end = ((tmpfileSize)>128) ? 128/8 : (tmpfileSize)/8 ;
 		for(j=0;j<end;j++)
 		{
-			printf("name:%s\n",pDNode->pData->directory.name[j]);
+			//			printf("name:%s\n",pDNode->pData->directory.name[j]);
 			pNameList=createNameNode(pDNode->pData->directory.name[j],pDNode->pData->directory.idNum[j]);
 			insertNameNode(&pNameTail,pNameList);
 		}
 		tmpfileSize-=128;
 	}
-	for(NameList *pIndex=NameHead.pNext;pIndex!=NULL;pIndex=pIndex->pNext)
-		printf("idNum:%d, name:%s\n",pIndex->idNum,pIndex->name);
+	printf("pTail->pData:%p\n",pTail->pData);
+	//	for(NameList *pIndex=NameHead.pNext;pIndex!=NULL;pIndex=pIndex->pNext)
+	//		printf("idNum:%d, name:%s\n",pIndex->idNum,pIndex->name);
 
 	tpTail=pNameTail;	
-	for(NameList *pIndex=NameHead.pNext ;NameHead.pNext->pNext->pNext!=tpTail;)
+	for(NameList *pIndex=NameHead.pNext->pNext ;NameHead.pNext->pNext->pNext!=tpTail;)
 	{
-		if((strcmp(pIndex->name,".")==0) || (strcmp(pIndex->name,"..")==0))
-			continue;
-		for(NameList *pJndex=pIndex;;pJndex=pJndex->pNext)
+		if(pIndex->pNext== NULL)	{  break; }
+		if((strcmp(pIndex->name,"..")==0) )
 		{
-			printf("tpTail:%p\n",tpTail);
-			printf("pJndex:%p, pJndex->pNext:%p\n",pJndex,pJndex->pNext);
+			pIndex=pIndex->pNext;
+			continue;
+		}
+		for(NameList *pJndex=pIndex;/*pJndex->pNext != NULL*/;pJndex=pJndex->pNext)
+		{
+			if(pJndex == tpTail)
+			{
+				tpTail = pPrev;
+				break;
+			}
+
 			if(strcmp(pJndex->name,pJndex->pNext->name) >0)
 			{
 				strcpy(tmpName,pJndex->name);
@@ -628,26 +785,23 @@ void myls(Inode *pInode, Data *pData, TNode *tPwd, int flag )
 				pJndex->pNext->idNum = pJndex->idNum;
 				pJndex->idNum=tmpNum;
 			}
-			if(pJndex->pNext == tpTail)
-			{
-				tpTail = pJndex;
-				break;
-			}
+			pPrev=pJndex;
 		}
 
-	}
 
-	for(NameList *pIndex=NameHead.pNext;pIndex!=NULL;pIndex=pIndex->pNext)
-		printf("idNum:%d, name:%s\n",pIndex->idNum,pIndex->name);
+	}
+	//	printf("end\n");
 
 
 
 	if(flag == 0)												//myls 인자 없는 경우
+	{
 		for(NameList *pIndex=NameHead.pNext;pIndex!=NULL;pIndex=pIndex->pNext)
 			if(pIndex==NameHead.pNext)
 				printf(".\n");
 			else 
 				printf("%s\n",pIndex->name);
+	}
 	if(flag == 1)												//myls -i 아이노드 번호 출력
 		for(NameList *pIndex=NameHead.pNext;pIndex!=NULL;pIndex=pIndex->pNext)
 			if(pIndex==NameHead.pNext)
@@ -659,11 +813,10 @@ void myls(Inode *pInode, Data *pData, TNode *tPwd, int flag )
 		{
 			tidNum = pIndex->idNum;
 			time = localtime(&(pInode[tidNum].time));
-
-			if(pInode[idNum].fileType == 1)
+			if(pInode[tidNum].fileType == 1)
 				printf("d %4d ",0);
 			else 
-				printf("- %4d ",pInode[idNum].fileSize);
+				printf("- %4d ",pInode[tidNum].fileSize);
 
 			printf("%d/%d/%d ",time->tm_year + 1900, time->tm_mon+1, time->tm_mday);
 			printf("%d:%d:%d ",time->tm_hour, time->tm_min, time->tm_sec);
@@ -679,12 +832,10 @@ void myls(Inode *pInode, Data *pData, TNode *tPwd, int flag )
 		{
 			tidNum = pIndex->idNum;
 			time = localtime(&(pInode[tidNum].time));
-			printf("%d ",pIndex->idNum);
-
-			if(pInode[idNum].fileType == 1)
+			if(pInode[tidNum].fileType == 1)
 				printf("d %4d ",0);
 			else 
-				printf("- %4d ",pInode[idNum].fileSize);
+				printf("- %4d ",pInode[tidNum].fileSize);
 
 			printf("%d/%d/%d ",time->tm_year + 1900, time->tm_mon+1, time->tm_mday);
 			printf("%d:%d:%d ",time->tm_hour, time->tm_min, time->tm_sec);
@@ -699,29 +850,106 @@ void myls(Inode *pInode, Data *pData, TNode *tPwd, int flag )
 
 }
 
-void f_mytouch(SNode *pSNode/*char cmd_line[][10]*/, SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
+/*
+   void f_mytouch(SNode *pSNode char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
+   {
+   short wd = readDbNuminID(ind+pwd->idNum,pDB,ind[pwd->idNum].fileSize/128);
+   int indNum = findInode(pSNode->data, &pDB[wd]);
+
+   if(indNum == 512)
+   {
+   int check = findemptyDir_line(&pDB[wd]);
+   if(check == -1)		return ;
+   pDB[wd].directory.idNum[check] = prepareInode(pSB, ind, 0, 0);
+   for(int i = 0; i < 4; i++)				
+   pDB[wd].directory.name[check][i] = pSNode->data[i];
+
+   ind[indNum].direct = -1;
+   ind[indNum].sindirect = -1;
+   ind[indNum].dlindirect = -1;
+   }
+   else
+   ind[indNum].time = time(NULL);
+   ind[pwd->idNum].fileSize+=8;
+   }
+   */
+void mytouch(SuperBlock *pSb, Inode *pInode, Data *pData, TNode *Pwd, char *name)
 {
-	short wd = readDbNuminID(ind+pwd->idNum,pDB,ind[pwd->idNum].fileSize/128);
-	int indNum = findInode(pSNode->data, &pDB[wd]);
+	long long idNum;
+	long long tmpidNum;
+	int dbNum;
+	int arrNum;
+	int bitNum;
+	int index;
+	int i;
+	int j;
+	int end;
+	int start;
+	int flag;
+	int tmpfileSize ;
 
-	printf("wd:%d\n",wd);
-	if(indNum == 512)
+	TNode *pTNode = NULL;
+
+	DNode Head = {NULL, NULL};
+	DNode *pTail = &Head;
+	DNode *pDNode = NULL;
+
+	idNum = Pwd->idNum;									//현재 디렉터리의 Inode
+	tmpfileSize = pInode[idNum].fileSize ;
+
+	printf("Pwd->idNum:%d\n",Pwd->idNum);
+	for(int i=0;i<=(pInode[idNum].fileSize)/128;i++)
 	{
-		int check = findemptyDir_line(&pDB[wd]);
-		if(check == -1)		return ;
-		pDB[wd].directory.idNum[check] = prepareInode(pSB, ind, 1, 0);
-		for(int i = 0; i < 4; i++)				
-			pDB[wd].directory.name[check][i] = pSNode->data[i];
-
-		ind[indNum].direct = -1;
-		ind[indNum].sindirect = -1;
-		ind[indNum].dlindirect = -1;
+		dbNum=readDbNuminID(pInode+Pwd->idNum, pData, i);
+		pDNode = createDBNode(pData + dbNum);
+		insertDBNode(&pTail, pDNode);
+		printf("pDNode->pData:%p\n",pDNode->pData);
 	}
-	else
-		ind[indNum].time = time(NULL);
-	ind[pwd->idNum].fileSize+=8;
-}
 
+	for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext)
+	{
+		if(pIndex == Head.pNext)
+			start = 2;
+		else 
+			start = 1;
+		end = ((tmpfileSize)>128) ? 128/8 : (tmpfileSize)/8 ;
+		if(tmpfileSize>=128)
+			tmpfileSize -= 128;
+		for(int i=start;i<end;i++)
+		{
+			if(strcmp(pIndex->pData->directory.name[i],name) == 0)
+			{
+				tmpidNum = pIndex->pData->directory.idNum[i];
+				if(pInode[tmpidNum].fileType == 1)
+				{
+					printf("같은 이름의 디렉터리가 존재합니다.\n");
+					return ;
+				}
+				pInode[tmpidNum].time = time(NULL); 
+				return;
+			}
+		}
+	}
+
+	findusableInode(pSb->usableInode, &arrNum, &bitNum);
+	markInode(pSb->usableInode, arrNum, bitNum);
+	idNum = arrNum*64 + bitNum - 1;										//새로 할당된 디렉터리의 Inode
+
+	initFile(pInode, pData, idNum, Pwd, name);						//새로 만든 디렉터리 초기화
+
+	index = addinfoPwd(pInode,pTail->pData/*pData,*/, Pwd, &idNum);						//현재 디렉터리 정보 갱신
+	printf("pData->directory.name[index]:%s\n",pTail->pData->directory.name[index]);
+	printf("index:%d\n",index);
+	printf("pTail->pData:%p\n",pTail->pData);
+	printf("pData[1]:%p\n",pData+1);
+	strcpy(pTail->pData->directory.name[index],name);
+	pTail->pData->directory.idNum[index] = idNum;
+	printf("pTail->pData->directory.name[index]:%s\n",pTail->pData->directory.name[index]);
+	printf("pData->directory.name[index]:%s\n",pData[17].directory.name[index]);
+	for(; &Head != pTail;)
+		deleteDBNode(findDBPrevNode(&Head,pTail),&pTail);
+	pInode[Pwd->idNum].fileSize += 8;
+}
 
 int main(void)
 {
@@ -873,8 +1101,8 @@ int main(void)
 				}
 			}
 			mycd(&pwd, &uPwd, tPwd,tUwd);
-			printf("pwd->idNum:%d\n",pwd->idNum);
-			printf("uPwd->idNum:%d\n",uPwd->idNum);
+			//			printf("pwd->idNum:%d\n",pwd->idNum);
+			//			printf("uPwd->idNum:%d\n",uPwd->idNum);
 		}
 		else if(strcmp("myls",SHAf.pNext->data) == 0)
 		{
@@ -935,13 +1163,86 @@ int main(void)
 		}
 		else if(strcmp("mytouch",SHAf.pNext->data)==0)
 		{
-			for(pSNode=SHAf.pNext;pSNode !=NULL;)
-			{
 			deleteSNode(&SHAf, SHAf.pNext);
 			pSNode = SHAf.pNext;
-			if(pSNode == NULL)	{ break ; }
-			f_mytouch(pSNode,&spblock,inode,dataBlock,pwd);
+			if(pSNode == NULL)		
+				flag = 1;
+			else 
+			{
+				if(strcmp(pSNode->data,"/") == 0)
+				{
+					for(;pSNode->pNext != NULL;)
+					{
+						absolutePath(inode, dataBlock, &Root, &tPwd, &tUwd,pSNode);
+						if(pSNode->pNext != NULL)
+						{
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+					}
+				}
+				else 
+				{
+					for(;pSNode->pNext!=NULL;)
+					{
+						relativePath(inode,&Root,&tPwd,&tUwd,dataBlock,pSNode);
+						if(pSNode->pNext != NULL)
+						{
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+					}
+				}
 			}
+			if(flag == 1)
+				printf("인자를 입력하세요\n");
+			else
+			{
+				printf("name:%s\n",pSNode->data);
+				mytouch(&spblock,inode,dataBlock,tPwd,pSNode->data);
+			}
+
+		}
+		else if(strcmp("rm",SHAf.pNext->data)==0)
+		{
+			deleteSNode(&SHAf, SHAf.pNext);
+			pSNode = SHAf.pNext;
+			if(pSNode == NULL)		
+				flag = 1;
+			else 
+			{
+				if(strcmp(pSNode->data,"/") == 0)
+				{
+					for(;pSNode->pNext != NULL;)
+					{
+						absolutePath(inode, dataBlock, &Root, &tPwd, &tUwd,pSNode);
+						if(pSNode->pNext != NULL)
+						{
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+					}
+				}
+				else 
+				{
+					for(;pSNode->pNext!=NULL;)
+					{
+						relativePath(inode,&Root,&tPwd,&tUwd,dataBlock,pSNode);
+						if(pSNode->pNext != NULL)
+						{
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+					}
+				}
+			}
+			if(flag == 1)
+				printf("인자를 입력하세요\n");
+			else
+			{
+				rm(&spblock, inode, dataBlock, tPwd, pSNode->data);
+			}
+
 
 		}
 		else if(strcmp("byebye",SHAf.pNext->data) == 0)
@@ -964,7 +1265,7 @@ int main(void)
 		   putchar('\n');
 		   */
 	}
-	
+
 
 	for(int i=0;i<16;i++)
 		printf("name:%s, idNum:%d\n",dataBlock[0].directory.name[i],dataBlock[0].directory.idNum[i]);
