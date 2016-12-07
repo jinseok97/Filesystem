@@ -147,7 +147,7 @@ int main(void)
 	DNode *pTail = &Head;
 	DNode *pDNode = NULL;
 
-	FILE *ofp = fopen("a", "r");
+	FILE *ofp = fopen("b", "r");
 
 	while((c=fgetc(ofp)) != EOF)
 	{

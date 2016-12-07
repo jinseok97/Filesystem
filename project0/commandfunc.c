@@ -56,12 +56,12 @@ void cmd_judge(char cmd[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pw
 //		f_mytouch(cmd, pSB, ind, pDB, pwd);
 	/*else */if(!strcmp(cmd[0], "mycp"))	
 		f_mycp(cmd, pSB, ind, pDB, pwd);
-	else if(!strcmp(cmd[0], "mycpfrom"))
-		f_mycpfrom(cmd, pSB, ind, pDB, pwd);
+//	else if(!strcmp(cmd[0], "mycpfrom"))
+//		f_mycpfrom(cmd, pSB, ind, pDB, pwd);
 	else if(!strcmp(cmd[0], "mycpto"))
 		f_mycpto(cmd, pSB, ind, pDB, pwd);
-	else if(cmd[0][0] != 'm' || cmd[0][1] != 'y')
-		f_command(cmd);
+//	else if(cmd[0][0] != 'm' || cmd[0][1] != 'y')
+//		f_command(cmd);
 	else
 		printf("mysh : %s : command not found\n", cmd[0]);
 
@@ -126,7 +126,7 @@ void f_mycp(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *
 		strncpy(pDB[DBnum].file, pDB[ind[indNum1].direct].file, 128); //수정해야
 	}
 }
-
+/*
 void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {								//mycpfrom orig_fs.file my_fs.file
 	printf("'mycpfrom' call\n");
@@ -178,7 +178,7 @@ void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNo
 
     fclose(ifp);
 }
-
+*/
 void f_mycpto(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {								//mycpto my_fs.file orig_fs.file
 	printf("'mycpto' call\n");
@@ -195,7 +195,7 @@ void f_mycpto(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode
 	else	
 		printf("'%s' is not found.\n", cmd_line[1]);
 }
-
+/*
 void f_command(char cmd_line[][10])
 {
 	if(!strcmp(cmd_line[0], "byebye"))
@@ -206,3 +206,4 @@ void f_command(char cmd_line[][10])
 
 	system(cmd_line[0]);
 }
+*/

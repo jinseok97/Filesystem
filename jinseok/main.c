@@ -37,7 +37,7 @@ int main(void)
 				printf("DB : %d", inode[i].direct);
 				printf(" %d", inode[i].sindirect);
 				printf(" %d |", inode[i].dlindirect);
-				printf("Time : %ld\n", inode[i].fileTime);
+				printf("Time : %ld\n", inode[i].time);
 			}
 			printf("	  	      ROOTDIRECTORY\n");
 			for(int i = 0; i < 10; i++)

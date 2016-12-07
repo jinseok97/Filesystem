@@ -11,7 +11,7 @@
 	#define NOFILE 512
 #endif
 
-#define	DEBUG	0
+#define	DEBUG	1
 
 void storeDatainBlock(Inode *, Data *, char);
 int prepareInode(SuperBlock *, Inode *, int, int);

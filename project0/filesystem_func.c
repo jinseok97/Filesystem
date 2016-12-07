@@ -312,6 +312,7 @@ int preparedataBlock(Data *pData,long long *usabledataBlock,long long *dbNum)
 	markdataBlock(usabledataBlock, findarrNum, findbitNum);
 
 	(*dbNum) = findarrNum * 64 + findbitNum - 1 ;
+	printf("dbNum:%d\n",*dbNum);
 	
 
 	initDataBlock(pData+(*dbNum));
@@ -339,37 +340,30 @@ int allocdbinIDdirect(SuperBlock *pSb, Inode *pInode, Data *pData)
 
 int allocdbinIDsindirect(SuperBlock *pSb, Inode *pInode, Data *pData)
 {
-	printf("1\n");
 	int flag = 0;
 	long long dbNum;
 	bool Doprepare = 0;
 	if(pInode->fileSize/128 < 1)	{ return 3; }	
 	if(pInode->fileSize/128 >= 103/*104*/)	{ return 1; }
-
-	printf("2\n");
 	if(pInode->fileSize/128 == 1)
 	{
-	printf("3\n");
 		//printf("beforedbNum:%lld\n",dbNum);
 		flag = preparedataBlock(pData,pSb->usabledataBlock, &dbNum);
-		printf("SinD:dbNum:%d\n",dbNum);
+		printf("dbNum:%d\n",dbNum);
 		//printf("afterdbNum:%lld\n",dbNum);
 
 		if(flag == 2)	{ return flag; }
 		pInode->sindirect = (short) dbNum;
 		//pInode->fileSize += 128 ;
 	}
-	printf("4\n");
 
+	//printf("beforedbNum:%lld\n",dbNum);
 	flag = preparedataBlock(pData,pSb->usabledataBlock, &dbNum);
-	printf("5\n");
-		printf("SinD:dbNum:%d\n",dbNum);
+	//printf("afterdbNum:%lld\n",dbNum);
 
 	if(flag == 2)	{ return flag; }
-	printf("6\n");
 
 	allocbitDbtoDr(pData + pInode->sindirect, dbNum);
-	printf("7\n");
 
 /*	for(int i=0;i<16;i++)
 		printBit(pData[pInode->sindirect].dataArr[i]);

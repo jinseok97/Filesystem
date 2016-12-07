@@ -16,11 +16,12 @@
 int prepareInode(SuperBlock *, Inode *, int, int);
 int findInode(char *fileName, Data *pDB);
 int findemptyDir_line(Data *);
+void storeDatainBlock(Inode *pInode, Data *pData, char c);
 
 void cmd_judge(char [][10], SuperBlock *, Inode *, Data *, TNode *);
 //void f_mytouch(char [][10], SuperBlock *, Inode *, Data *, TNode *);
 void f_mycp(char [][10], SuperBlock *, Inode *, Data *, TNode *);
-void f_mycpfrom(char [][10], SuperBlock *, Inode *, Data *, TNode *);
+void f_mycpfrom(char *, char *, SuperBlock *, Inode *, Data *, TNode *);
 void f_mycpto(char [][10], SuperBlock *, Inode *, Data *, TNode *);
-void f_command(char [][10]);
+void f_command(char *);
 

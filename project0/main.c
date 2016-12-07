@@ -1,5 +1,13 @@
 #include "filesystem.h"
 #include "command.h"
+#define DEBUG 1
+
+void f_command(char *cmd)
+{
+	if(!strcmp(cmd, "byebye"))		exit(1);
+
+	system(cmd);
+}
 
 void procArgument(SNode *pHead)
 {
@@ -947,8 +955,104 @@ void mytouch(SuperBlock *pSb, Inode *pInode, Data *pData, TNode *Pwd, char *name
 	printf("pTail->pData->directory.name[index]:%s\n",pTail->pData->directory.name[index]);
 	printf("pData->directory.name[index]:%s\n",pData[17].directory.name[index]);
 	for(; &Head != pTail;)
-		deleteDBNode(findDBPrevNode(&Head,pTail),&pTail);
+	deleteDBNode(findDBPrevNode(&Head,pTail),&pTail);
 	pInode[Pwd->idNum].fileSize += 8;
+}
+
+void f_mycpfrom(char *name1, char *name2, SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
+{								//mycpfrom orig_fs.file my_fs.file
+//	for(int i=0;i<=pInode[idNum].fileSize/128;i++)
+//	{
+//		dbNum = readDbNuminID(ind+pwd -> idNum, pDB, i);
+//		unmarkdataBlock(pSB->usabledataBlock, dbNum/64, (dbNum+1) );
+//	}
+
+	printf("'mycpfrom' call\n");
+
+	TNode *pTNode = NULL;
+	DNode Head = {NULL, NULL};
+	DNode *pTail = &Head;
+	DNode *pDNode = NULL;
+	int start, end;
+
+	long long idNum = pwd -> idNum;
+	int tmpfileSize = ind[idNum].fileSize;
+	int dbNum, tmpidNum, indNum;
+
+    FILE *ifp;
+    ifp = fopen(name1, "r");
+    if(ifp == NULL)
+    {
+        printf("'%s' is not found.\n", name1);
+        fclose(ifp);
+        return ;
+    }
+
+	for(int i = 0; i <= (ind[idNum].fileSize) / 128; i++)
+	{
+		dbNum = readDbNuminID(ind+pwd -> idNum, pDB, i);
+		pDNode = createDBNode(pDB + dbNum);
+		insertDBNode(&pTail, pDNode);
+	}
+
+	for(DNode *pIndex = Head.pNext; pIndex != NULL; pIndex = pIndex -> pNext)
+	{
+		if(pIndex == Head.pNext)
+			start = 2;
+		else
+			start = 1;
+
+		end = (tmpfileSize > 128) ? 128 / 8 : (tmpfileSize) / 8;
+		if(tmpfileSize >= 128)
+			tmpfileSize -= 128;
+
+		for(int i = start; i < end; i++)
+		{
+			if(!strncmp(pIndex -> pData -> directory.name[i], name2, 4))
+			{
+				rm(pSB, ind, pDB, pwd, name2);
+//				tmpidNum = pIndex -> pData -> directory.idNum[i];
+//				ind[tmpidNum].time = time(NULL);
+//				ind[tmpidNum].fileSize = 0;
+				printf("old file\n");
+//				return ;
+				//이미 파일 존재할 때 초기화 필요
+			}
+		}
+	}
+
+	//파일이 없을 때
+	int index = addinfoPwd(ind, pTail -> pData, pwd, &idNum);
+
+	indNum = prepareInode(pSB, ind, 1, 0);
+	strncpy(pTail -> pData -> directory.name[index], name2, 4);
+	pTail -> pData -> directory.idNum[index] = indNum;
+	ind[pwd->idNum].fileSize += 8;
+
+    char c;
+	int flag, DBnum, i;	
+    while((c = fgetc(ifp)) != EOF)
+    {
+		printf("ind[indNum].fileSize:%d\n",ind[indNum].fileSize);
+		if(((ind + indNum) -> fileSize) % 128 == 0)
+		{
+			flag = allocdbinIDdirect(pSB, &ind[indNum], pDB);
+
+			if(flag == 1)
+				flag = allocdbinIDsindirect(pSB, ind+indNum, pDB);
+
+			if(flag == 1)
+			{
+				flag = allocdbinIDdlindirect(pSB, &ind[indNum], pDB);
+				if(isBreak(flag))	{break;}
+			}
+		}
+		storeDatainBlock(&ind[indNum], pDB, c);
+
+		i++;
+	}
+
+	fclose(ifp);
 }
 
 int main(void)
@@ -988,6 +1092,7 @@ int main(void)
 	int dbNum;
 	int flag = 0;
 
+			char tmpname[10];
 	initsuperBlock(&spblock);
 	markInode(spblock.usableInode, 0, 1);
 	markdataBlock(spblock.usabledataBlock, 0, 1);
@@ -1203,6 +1308,54 @@ int main(void)
 			}
 
 		}
+		else if(strcmp("mycpfrom", SHAf.pNext -> data) == 0)
+		{
+			strncpy(tmpname, SHAf.pNext -> data, 4);
+			deleteSNode(&SHAf, SHAf.pNext);
+			pSNode = SHAf.pNext;
+			if(pSNode == NULL)		
+				flag = 1;
+			else 
+			{
+				if(strcmp(pSNode->data,"/") == 0)
+				{
+					for(;pSNode->pNext != NULL;)
+					{
+						absolutePath(inode, dataBlock, &Root, &tPwd, &tUwd,pSNode);
+						if(pSNode->pNext != NULL)
+						{
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+					}
+				}
+				else 
+				{
+					for(;pSNode->pNext!=NULL;)
+					{
+						relativePath(inode,&Root,&tPwd,&tUwd,dataBlock,pSNode);
+						if(pSNode->pNext != NULL)
+						{
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+						else
+						{
+						}
+					}
+				}
+			}
+			if(flag == 1)
+				printf("인자를 입력하세요\n");
+			else
+			{
+				printf("1 : %s\n", tmpname);
+				printf("2 :%s\n",pSNode->data);
+				f_mycpfrom(tmpname, pSNode -> data, &spblock,inode,dataBlock,tPwd);
+			}
+
+		}
+
 		else if(strcmp("rm",SHAf.pNext->data)==0)
 		{
 			deleteSNode(&SHAf, SHAf.pNext);
@@ -1251,6 +1404,50 @@ int main(void)
 				deleteSNode(&SHAf, pSNode);
 			break;
 		}
+		else if(SHAf.pNext -> data[0] != 'm' || SHAf.pNext -> data[1] != 'y')
+		{
+			strncpy(tmpname, SHAf.pNext -> data, 4);
+			deleteSNode(&SHAf, SHAf.pNext);
+			pSNode = SHAf.pNext;
+			if(pSNode == NULL)		
+				flag = 1;
+			else 
+			{
+				if(strcmp(pSNode->data,"/") == 0)
+				{
+					for(;pSNode->pNext != NULL;)
+					{
+						absolutePath(inode, dataBlock, &Root, &tPwd, &tUwd,pSNode);
+						if(pSNode->pNext != NULL)
+						{
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+					}
+				}
+				else 
+				{
+					for(;pSNode->pNext!=NULL;)
+					{
+						relativePath(inode,&Root,&tPwd,&tUwd,dataBlock,pSNode);
+						if(pSNode->pNext != NULL)
+						{
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+					}
+				}
+			}
+			if(pSNode -> data != NULL)
+			{
+				strcat(tmpname, " ");
+				strcat(tmpname, pSNode -> data);
+			}
+
+			printf("1 : %s\n", tmpname);
+			f_command(tmpname);
+
+		}
 
 		for(pSNode =SHAf.pNext; pSNode != NULL ;pSNode = pSNode->pNext)
 			deleteSNode(&SHAf, pSNode);
@@ -1264,6 +1461,34 @@ int main(void)
 		   }
 		   putchar('\n');
 		   */
+#if DEBUG
+		{
+			printf("			INODEPRINT\n");
+			for(int i = 0; i < 10; i++)
+			{
+				printf("   [#%d IND] ", i);
+				printf("Type : %d | ", inode[i].fileType);
+				printf("Size : %3d | ", inode[i].fileSize);
+				printf("DB : %d", inode[i].direct);
+				printf(" %d", inode[i].sindirect);
+				printf(" %d |", inode[i].dlindirect);
+				printf("Time : %ld\n", inode[i].time);
+			}
+			printf("	  	      ROOTDIRECTORY\n");
+			for(int i = 0; i < 10; i++)
+			{
+				printf("		    %4d", dataBlock[0].directory.idNum[i]);
+				printf("      ");
+				for(int j = 0; j < 4; j++)
+				{
+					printf("%c", dataBlock[0].directory.name[i][j]);
+				}
+				putchar('\n');
+			}
+			printBit(spblock.usableInode[0]);
+			printBit(spblock.usabledataBlock[0]);
+		}
+#endif
 	}
 
 
