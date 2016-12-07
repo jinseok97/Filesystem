@@ -1,6 +1,6 @@
 
 
-		//main.c//
+		//main.c에 추가//
 		//char tmpname[10]; 선언 필요
 		else if(strcmp("mycpfrom", SHAf.pNext -> data) == 0)
 		{
@@ -44,8 +44,8 @@
 			else
 			{
 				printf("1 : %s\n", tmpname);
-				printf("2 :%s\n",pSNode->data);
-				f_mycpfrom(tmpname, pSNode -> data, &spblock,inode,dataBlock,tPwd);
+				printf("2 : %s\n", pSNode -> data);
+				f_mycpfrom(tmpname, pSNode -> data, &spblock, inode, dataBlock, tPwd);
 			}
 
 		}

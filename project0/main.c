@@ -1020,11 +1020,7 @@ void f_mycpfrom(char *name1, char *name2, SuperBlock *pSB, Inode *ind, Data *pDB
 			if(!strncmp(pIndex -> pData -> directory.name[i], name2, 4))
 			{
 				rm(pSB, ind, pDB, pwd, name2);
-//				tmpidNum = pIndex -> pData -> directory.idNum[i];
-//				ind[tmpidNum].time = time(NULL);
-//				ind[tmpidNum].fileSize = 0;
 				printf("old file\n");
-//				return ;
 				//이미 파일 존재할 때 초기화 필요
 			}
 		}
@@ -1042,7 +1038,7 @@ void f_mycpfrom(char *name1, char *name2, SuperBlock *pSB, Inode *ind, Data *pDB
 	int flag, DBnum, i;	
     while((c = fgetc(ifp)) != EOF)
     {
-		printf("ind[indNum].fileSize:%d\n",ind[indNum].fileSize);
+		printf("ind[indNum].fileSize:%d\n", ind[indNum].fileSize);
 		if(((ind + indNum) -> fileSize) % 128 == 0)
 		{
 			flag = allocdbinIDdirect(pSB, &ind[indNum], pDB);
@@ -1057,6 +1053,7 @@ void f_mycpfrom(char *name1, char *name2, SuperBlock *pSB, Inode *ind, Data *pDB
 			}
 		}
 		storeDatainBlock(&ind[indNum], pDB, c);
+//		putchar(c);
 
 		i++;
 	}
@@ -1120,7 +1117,10 @@ void f_mycpto(char *name1, char *name2, SuperBlock *pSB, Inode *ind, Data *pDB, 
 
 	for(DNode *pIndex = Head.pNext; pIndex != NULL; pIndex = pIndex -> pNext)
 		for(int i = 0; i < 128; i++)
+		{
+			putchar(pIndex -> pData -> file[i]);
 			putc(pIndex -> pData -> file[i], ofp);
+		}
 
 }
 
@@ -1378,9 +1378,9 @@ int main(void)
 			}
 
 		}
+
 		else if(strcmp("mycpfrom", SHAf.pNext -> data) == 0)
 		{
-			strncpy(tmpname, SHAf.pNext -> data, 4);
 			deleteSNode(&SHAf, SHAf.pNext);
 			pSNode = SHAf.pNext;
 			if(pSNode == NULL)		
@@ -1406,6 +1406,7 @@ int main(void)
 						relativePath(inode,&Root,&tPwd,&tUwd,dataBlock,pSNode);
 						if(pSNode->pNext != NULL)
 						{
+							strncpy(tmpname, pSNode -> data, 4);
 							deleteSNode(&SHAf, pSNode);
 							pSNode = SHAf.pNext;
 						}
@@ -1425,10 +1426,8 @@ int main(void)
 			}
 
 		}
-
 		else if(strcmp("mycpto", SHAf.pNext -> data) == 0)
 		{
-			strncpy(tmpname, SHAf.pNext -> data, 4);
 			deleteSNode(&SHAf, SHAf.pNext);
 			pSNode = SHAf.pNext;
 			if(pSNode == NULL)		
@@ -1454,6 +1453,7 @@ int main(void)
 						relativePath(inode,&Root,&tPwd,&tUwd,dataBlock,pSNode);
 						if(pSNode->pNext != NULL)
 						{
+							strncpy(tmpname, SHAf.pNext -> data, 4);
 							deleteSNode(&SHAf, pSNode);
 							pSNode = SHAf.pNext;
 						}
@@ -1563,7 +1563,7 @@ int main(void)
 			}
 
 			printf("1 : %s\n", tmpname);
-			f_command(tmpname);
+			system(tmpname);
 
 		}
 
