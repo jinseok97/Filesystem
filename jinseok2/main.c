@@ -1,6 +1,7 @@
 #include "filesystem.h"
 #include "command.h"
 
+void f_mycpto(char *name1, char *name2, SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd);
 void storeDatainBlock(Inode *pInode,Data *pData, char c)
 {
 	int dbNum; 
@@ -1104,6 +1105,75 @@ void mytouch(SuperBlock *pSb, Inode *pInode, Data *pData, TNode *Pwd, char *name
 		deleteDBNode(findDBPrevNode(&Head,pTail),&pTail);
 	pInode[Pwd->idNum].fileSize += 8;
 }
+void f_mycpto(char *name1, char *name2, SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
+{
+	printf("'mycpto' call\n");
+
+	TNode *pTNode = NULL;
+	DNode Head = {NULL, NULL};
+	DNode *pTail = &Head;
+	DNode *pDNode = NULL;
+	int start, end, flag;
+
+	long long idNum = pwd -> idNum;
+	int tmpfileSize = ind[idNum].fileSize;
+	int dbNum, tmpidNum, indNum;
+
+	for(int i = 0; i <= (ind[idNum].fileSize) / 128; i++)
+	{
+		dbNum = readDbNuminID(ind+pwd -> idNum, pDB, i);
+		pDNode = createDBNode(pDB + dbNum);
+		insertDBNode(&pTail, pDNode);
+	}
+
+	for(DNode *pIndex = Head.pNext; pIndex != NULL; pIndex = pIndex -> pNext)
+	{
+		if(pIndex == Head.pNext)
+			start = 2;
+		else
+			start = 1;
+
+		end = (tmpfileSize > 128) ? 128 / 8 : (tmpfileSize) / 8;
+		if(tmpfileSize >= 128)
+			tmpfileSize -= 128;
+
+		for(int i = start; i < end; i++)
+		{
+			if(strncmp(pIndex -> pData -> directory.name[i], name1, 4))
+			{
+				printf("'%s' is not found in myfs.\n", name1);
+//				flag = 1;
+				return ;
+			}
+			else
+				tmpidNum = pIndex -> pData -> directory.idNum[i];
+		}
+//		if(flag == 1)
+//			break;
+	}
+	
+	FILE *ofp;
+	ofp = fopen(name2, "w");
+
+	for(int i = 0; i < (ind[tmpidNum].fileSize / 128); i++)
+	{
+		dbNum = readDbNuminID(ind + tmpidNum, pDB, i);
+		pDNode = createDBNode(pDB + dbNum);
+		insertDBNode(&pTail, pDNode);
+	}
+
+	for(DNode *pIndex = Head.pNext; pIndex != NULL; pIndex = pIndex -> pNext)
+		for(int i = 0; i < 128; i++)
+			if(pIndex -> pData -> file[i] != -1)
+			{
+				putchar(pIndex -> pData -> file[i]);	//확인
+				putc(pIndex -> pData -> file[i], ofp);
+			}
+
+}
+
+
+
 void f_mycpfrom(char *name1, char *name2, SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {								//mycpfrom orig_fs.file my_fs.file
 
@@ -1936,6 +2006,94 @@ int main(void)
 				f_mycpfrom(tmpname, pSNode -> data, &spblock, inode, dataBlock, tPwd);
 			tmpname[0] = '\0';
 		}
+		else if(strcmp("mycp", SHAf.pNext -> data) == 0)
+		{
+			deleteSNode(&SHAf, SHAf.pNext);
+			pSNode = SHAf.pNext;
+			strncpy(tmpname, SHAf.pNext -> data, 4);
+			if(pSNode == NULL)		
+				flag = 1;
+			else 
+			{
+				if(strcmp(pSNode->data,"/") == 0)
+				{
+					for(;pSNode->pNext != NULL;)
+					{
+						absolutePath(inode, dataBlock, &Root, &tPwd, &tUwd,pSNode);
+						if(pSNode->pNext != NULL)
+						{
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+					}
+				}
+				else 
+				{
+					for(;pSNode->pNext!=NULL;)
+					{
+						relativePath(inode,&Root,&tPwd,&tUwd,dataBlock,pSNode);
+						if(pSNode->pNext != NULL)
+						{
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+					}
+				}
+			}
+			if(flag == 1)
+				printf("인자를 입력하세요\n");
+			else
+			{
+				catArg2[0] = '\0';
+//				strcpy(catArg2, "");
+				mycat(&spblock,inode,dataBlock,tPwd,pSNode -> data, tmpname, catArg2);
+			}
+			tmpname[0] = '\0';
+		}
+		else if(strcmp("mycpto", SHAf.pNext -> data) == 0)
+		{
+			deleteSNode(&SHAf, SHAf.pNext);
+			pSNode = SHAf.pNext;
+			if(pSNode == NULL)		
+				flag = 1;
+			else 
+			{
+				if(strcmp(pSNode -> data,"/") == 0)
+				{
+					for(; pSNode -> pNext != NULL;)
+					{
+						absolutePath(inode, dataBlock, &Root, &tPwd, &tUwd,pSNode);
+						if(pSNode -> pNext != NULL)
+						{
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+					}
+				}
+				else 
+				{
+					for(; pSNode -> pNext != NULL;)
+					{
+						relativePath(inode, &Root, &tPwd, &tUwd, dataBlock, pSNode);
+						if(pSNode -> pNext != NULL)
+						{
+							strncpy(tmpname, SHAf.pNext -> data, 4);
+							deleteSNode(&SHAf, pSNode);
+							pSNode = SHAf.pNext;
+						}
+					}
+				}
+			}
+			if(flag == 1)
+				printf("인자를 입력하세요\n");
+			else
+			{
+				printf("1 : %s\n", tmpname);
+				printf("2 : %s\n",pSNode->data);
+				f_mycpto(tmpname, pSNode -> data, &spblock,inode,dataBlock,tPwd);
+			}
+
+		}
 		else if(strcmp("showinode",SHAf.pNext->data)==0)
 		{
 			deleteSNode(&SHAf, SHAf.pNext);
@@ -1969,7 +2127,7 @@ int main(void)
 				}
 				if(strlen(catArg2) == 0)
 				{
-					strcpy(catArg2,pIndex->data);
+					printf("catArg2 : %s\n", catArg2);
 					continue;
 				}
 				flag = 2;
