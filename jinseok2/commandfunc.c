@@ -41,12 +41,12 @@ int prepareInode(SuperBlock *pSB, Inode *ind, int fType, int fSize)
     ind[indNum].fileType = fType;
     ind[indNum].fileSize = fSize;
     ind[indNum].time = time(NULL);	//"filesystem.h" time_t * -> time_t로 수정
-    
+}    
     
 /*	printf("iNode[%d]\n", indNum);
     printf("fType : %d\n", ind[indNum].fileType);
     printf("fSize : %d\n", ind[indNum].fileSize);
-    printf("fTime : %d\n", ind[indNum].fileTime);	*/
+    printf("fTime : %d\n", ind[indNum].fileTime);	
     return indNum;
 }
 
@@ -54,7 +54,7 @@ void cmd_judge(char cmd[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pw
 {
 //	if(!strcmp(cmd[0], "mytouch"))
 //		f_mytouch(cmd, pSB, ind, pDB, pwd);
-//	/*else */if(!strcmp(cmd[0], "mycp"))	
+//	else if(!strcmp(cmd[0], "mycp"))	
 //		f_mycp(cmd, pSB, ind, pDB, pwd);
 //	else if(!strcmp(cmd[0], "mycpfrom"))
 //		f_mycpfrom(cmd, pSB, ind, pDB, pwd);
@@ -66,7 +66,6 @@ void cmd_judge(char cmd[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pw
 		printf("mysh : %s : command not found\n", cmd[0]);
 
 }
-/*
 void f_mytouch(SNode *pSNode char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {
 	short wd = readDbNuminID(ind+pwd->idNum,pDB,ind[pwd->idNum].fileSize/128);
@@ -87,7 +86,6 @@ void f_mytouch(SNode *pSNode char cmd_line[][10], SuperBlock *pSB, Inode *ind, D
     else
         ind[indNum].fileTime = time(NULL);
 }
-*/
 void f_mycp(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {
 	printf("'mycp' call");
@@ -126,7 +124,6 @@ void f_mycp(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *
 		strncpy(pDB[DBnum].file, pDB[ind[indNum1].direct].file, 128); //수정해야
 	}
 }
-/*
 void f_mycpfrom(char cmd_line[][10], SuperBlock *pSB, Inode *ind, Data *pDB, TNode *pwd)
 {								//mycpfrom orig_fs.file my_fs.file
 	printf("'mycpfrom' call\n");
