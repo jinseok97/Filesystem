@@ -147,9 +147,7 @@ int main(void)
 	DNode *pTail = &Head;
 	DNode *pDNode = NULL;
 
-	FILE *ofp = fopen("a", "r");
-
-	while((c=fgetc(ofp)) != EOF)
+	while((c=getchar()) != '\n')
 	{
 		if(inode.fileSize % 128 == 0)
 		{
@@ -165,8 +163,24 @@ int main(void)
 			}
 		}
 
-				storeDatainBlock(&inode, dataBlock, c);
-		
+		/*
+		   if(inode.fileSize / 128 == 1)
+		   dbNum = readIDDire(&inode);
+		   if((inode.fileSize / 128 >= 2) && (inode.fileSize / 128 <=104))
+		   dbNum=readIDSinD(&inode, dataBlock, inode.fileSize/128);
+		   if((inode.fileSize / 128 >= 105) && (inode.fileSize /128 <=10611))
+		   dbNum=readIDDlin(&inode, dataBlock, inode.fileSize/128);
+		   */
+
+		//	dbNum=readDbNuminID(&inode, dataBlock, i/128+1);
+
+		//	dataBlock[dbNum].file[i%128] = c;
+		storeDatainBlock(&inode, dataBlock, c);
+		/*
+		   printf("i:%d\n",i);
+		   for(int j=0;j<i%128;j++)
+		   printf("dataBlock[%d].file[%d]:%c\n",dbNum,j,dataBlock[dbNum].file[j]);
+		   */
 		i++;
 	}
 
@@ -220,14 +234,5 @@ int main(void)
 		for(DNode *pDNode = &Head; pDNode != NULL;pDNode = pDNode->pNext, j++)
 		printf("[%d]:pNode: %p, pNod->pNext: %p\n",pDNode->pData - dataBlock,pDNode, pDNode->pNext);
 		*/	
-	for(int j = 0; j < 128; j++)
-		printf("%c", dataBlock[0].file[j]);
-	printf("\n");
-	for(int j = 0; j < 128; j++)
-		printf("%c", dataBlock[1].file[j]);
-	printf("\n");
-	for(int j = 0; j < 128; j++)
-		printf("%c", dataBlock[2].file[j]);
-	printf("\n");
 	return 0;
 }
