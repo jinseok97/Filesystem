@@ -1,14 +1,15 @@
 #include <stdio.h>
+#include "filesystem.h"
 
 int main(void)
 {
-	FILE *fp = fopen("myfs","rb");
-	char a[20] = { 0};
+	Data test;
+	test.directory.name[0][0] ='1';
+	test.directory.name[0][1] ='2';
+	test.directory.name[0][2] ='3';
 
-	fseek(fp,0,SEEK_SET);
-	fread(a,sizeof(char),4,fp);
+	Data test2=test;
 
-	printf("%s\n",a);
-
+	printf("test.name[0]:%s\n",test2.directory.name[0]);
 	return 0;
 }
