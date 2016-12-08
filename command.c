@@ -42,6 +42,6 @@
 			}
 
 			printf("1 : %s\n", tmpname);
-			f_command(tmpname);
+			system(tmpname);
 
 		}
