@@ -2134,7 +2134,7 @@ int main(void)
 			if(flag == 1)
 				printf("인자를 입력하세요\n");
 			else
-				f_mycpfrom(tmpname, pSNode -> data, &spblock, inode, dataBlock, tPwd);
+				f_mycpfrom(tmpname, pSNode -> data, &spblock,inode,dataBlock,tPwd);
 			tmpname[0] = '\0';
 			//for(int i=0;i<16;i++)
 			//	printf("%d %s\n",dataBlock[0].directory.idNum[i], dataBlock[0].directory.name[i]);
