@@ -22,6 +22,6 @@ void cmd_judge(char [][10], SuperBlock *, Inode *, Data *, TNode *);
 //void f_mytouch(char [][10], SuperBlock *, Inode *, Data *, TNode *);
 void f_mycp(char [][10], SuperBlock *, Inode *, Data *, TNode *);
 void f_mycpfrom(char *, char *, SuperBlock *, Inode *, Data *, TNode *);
-void f_mycpto(char [][10], SuperBlock *, Inode *, Data *, TNode *);
+void f_mycpto(char *,char *, SuperBlock *, Inode *, Data *, TNode *);
 void f_command(char *);
 
