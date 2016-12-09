@@ -322,10 +322,7 @@ void rm(SuperBlock *pSb,Inode *pInode, Data *pData,TNode *Pwd, char *name)
 			if(strcmp(pIndex->pData->directory.name[i],name) == 0)
 			{
 				tmpidNum = pIndex->pData->directory.idNum[i];
-				printf("i:%d\n",i);
-				printf("tmpidNum:%d\n",tmpidNum);
-				printf("name:%s\n",pIndex->pData->directory.name[i]);
-	Remo = pIndex->pData->directory.idNum[i];
+				Remo = pIndex->pData->directory.idNum[i];
 				if(pInode[tmpidNum].fileType == 1)
 				{
 					flag = 2;
@@ -352,19 +349,33 @@ void rm(SuperBlock *pSb,Inode *pInode, Data *pData,TNode *Pwd, char *name)
 		printf("디렉터리 입니다.\n");
 		return ;
 	}
-	printf("i:%d\n",i);
-//	Remo = pData[dbNum].directory.idNum[i];					//지우고자 하는 디렉터리의 아이노드 번호
-	for(int i=0;i<=(pInode[idNum].fileSize)/128;i++)
+	for(int i=(pInode[Remo].fileSize/128);i>=0;i--)
 	{
 		dbNum=readDbNuminID(pInode+Remo, pData, i);
-		unmarkdataBlock(pSb->usabledataBlock, dbNum/64, (dbNum + 1) %64);	//지우고자 하는 디렉터리에 할당된 데이터블럭 할당 해제
+		unmarkdataBlock(pSb->usabledataBlock, dbNum/64, (dbNum + 1) %64);	
+
+		if(i==1)
+		{
+			dbNum = pInode[Remo].sindirect;
+			unmarkdataBlock(pSb->usabledataBlock, dbNum/64, (dbNum + 1) %64);	
+		}
+		if((i>=103) &&((i%103) == 1))
+		{
+			dbNum=readDbNuminID(pInode+Remo, pData, i);
+			unmarkdataBlock(pSb->usabledataBlock, dbNum/64, (dbNum + 1) %64);
+		}
+
+		if(i==103)
+		{
+			dbNum = pInode[Remo].dlindirect;
+			unmarkdataBlock(pSb->usabledataBlock, dbNum/64, (dbNum + 1) %64);
+		}
 	}
-	printf("idNum:%d\n",idNum);
 
 	unmarkInode(pSb->usableInode,Remo/64,(Remo+1)%64);
 	pInode[idNum].fileSize -= 8;
-	
-for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext,index++)
+
+	for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext,index++)
 	{
 		if(pIndex == Head.pNext)
 			pDPrev = pIndex ;
@@ -403,43 +414,43 @@ for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext,index++)
 		pDPrev = pIndex ;
 
 	}
-/*
-	for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext,index++)
-	{
-		if(pIndex == Head.pNext)
-			pDPrev = pIndex ;
+	/*
+	   for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext,index++)
+	   {
+	   if(pIndex == Head.pNext)
+	   pDPrev = pIndex ;
 
-		if(index < ((pInode[idNum].fileSize+8)-tmpfileSize)/128)
-			continue;
-		else if(index == ((pInode[idNum].fileSize+8)-tmpfileSize)/128)
-			j=i;
-		else 
-			j=0;
-		printf("j:%d\n",j);
-		end = (((pInode[idNum].fileSize+8)-128*index)>128) ? 128/8 : ((pInode[idNum].fileSize+8)-128*index)/8 ;
-		printf("end:%d\n",end);
-		for(j;j<end;j++)
-		{
-			if(index==0 && j<=2)
-				continue;
-			else if(index>=1 && j==0)
-				strcpy(pDPrev->pData->directory.name[15], pIndex->pData->directory.name[j]);
-			else if(j == end-1)
-			{
-				for(int i=0;i<4;i++)
-					pIndex->pData->directory.name[j][i]=' ';
-			}
-			else 
-				strcpy(pIndex->pData->directory.name[j-1], pIndex->pData->directory.name[j]);
+	   if(index < ((pInode[idNum].fileSize+8)-tmpfileSize)/128)
+	   continue;
+	   else if(index == ((pInode[idNum].fileSize+8)-tmpfileSize)/128)
+	   j=i;
+	   else 
+	   j=0;
+	   printf("j:%d\n",j);
+	   end = (((pInode[idNum].fileSize+8)-128*index)>128) ? 128/8 : ((pInode[idNum].fileSize+8)-128*index)/8 ;
+	   printf("end:%d\n",end);
+	   for(j;j<end;j++)
+	   {
+	   if(index==0 && j<=2)
+	   continue;
+	   else if(index>=1 && j==0)
+	   strcpy(pDPrev->pData->directory.name[15], pIndex->pData->directory.name[j]);
+	   else if(j == end-1)
+	   {
+	   for(int i=0;i<4;i++)
+	   pIndex->pData->directory.name[j][i]=' ';
+	   }
+	   else 
+	   strcpy(pIndex->pData->directory.name[j-1], pIndex->pData->directory.name[j]);
 
-				//strcpy(pIndex->pData->directory.name[j], pIndex->pData->directory.name[j+1]);
+	//strcpy(pIndex->pData->directory.name[j], pIndex->pData->directory.name[j+1]);
 
-
-		}
-		pDPrev = pIndex ;
 
 	}
-*/
+	pDPrev = pIndex ;
+
+	}
+	*/
 }
 void removeDirectory(SuperBlock *pSb,Inode *pInode, Data *pData,TNode *Pwd, char *name)
 {
@@ -524,13 +535,30 @@ void removeDirectory(SuperBlock *pSb,Inode *pInode, Data *pData,TNode *Pwd, char
 		printf("%s는 디렉터리가 아닙니다.\n",name);
 		return ;
 	}
-	for(int i=0;i<=(pInode[Remo].fileSize)/128;i++)
+	for(int i=(pInode[Remo].fileSize/128);i>=0;i--)
 	{
 		dbNum=readDbNuminID(pInode+Remo, pData, i);
-		unmarkInode(pSb->usableInode, dbNum/64, (dbNum + 1) %64);	//지우고자 하는 디렉터리에 할당된 데이터블럭 할당 해제
+		unmarkdataBlock(pSb->usabledataBlock, dbNum/64, (dbNum + 1) %64);	
+
+		if(i==1)
+		{
+			dbNum = pInode[Remo].sindirect;
+			unmarkdataBlock(pSb->usabledataBlock, dbNum/64, (dbNum + 1) %64);	
+		}
+		if((i>=103) &&((i%103) == 1))
+		{
+			dbNum=readDbNuminID(pInode+Remo, pData, i);
+			unmarkdataBlock(pSb->usabledataBlock, dbNum/64, (dbNum + 1) %64);
+		}
+
+		if(i==103)
+		{
+			dbNum = pInode[Remo].dlindirect;
+			unmarkdataBlock(pSb->usabledataBlock, dbNum/64, (dbNum + 1) %64);
+		}
 	}
-	//	for(int i=0;i<16;i++)
-	//		printBit(pSb->usableInode[i]);
+
+
 	pInode[idNum].fileSize -= 8;
 	unmarkInode(pSb->usableInode, Remo/64, (Remo + 1) %64);	//지우고자 하는 디렉터리에 할당된 데이터블럭 할당 해제
 	for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext,index++)
@@ -962,54 +990,41 @@ void relativePath(Inode *pInode, TNode *pRoot, TNode **tPwd, TNode **tUwd, Data 
 	DNode Head = {NULL,NULL};
 	DNode *pTail = &Head;
 	DNode *pDNode = NULL;
-	printf("0-1\n");
 	for(int i=0;i<=(pInode->fileSize)/128;i++)
 	{
 		dbNum=readDbNuminID(pInode+idNum, pData, i);
 		pDNode = createDBNode(pData + dbNum);
 		insertDBNode(&pTail, pDNode);
 	}
-	printf("0-2\n");
 
 	if(strcmp("..",pSNode->data)==0)
 	{
-		printf("0-3\n");
 		(*tPwd) = (*tUwd); 
 		idNum = (*tPwd)->idNum;
 	}
 	else
 	{
-		printf("0-4\n");
-
 		for(DNode *pIndex=Head.pNext;pIndex != NULL;pIndex=pIndex->pNext)
 		{
-			printf("0-5\n");
 			end = ((tmpfileSize)>128) ? 128/8 : (tmpfileSize)/8 ;
 			for(j=0;j<end;j++)
 			{
-				printf("0-6\n");
 				if(strcmp(pIndex->pData->directory.name[j],pSNode->data)==0)
 				{
-					printf("0-7\n");
 					idNum = pIndex->pData->directory.idNum[j];
 					flag = 1;
 					break;
 				}	
 				else if(strcmp(pSNode->data," ") == 0)
 				{
-					printf("0-8\n");
 					return ;
 				}
-				printf("0-9\n");
 			}
-			printf("0-10\n");
 			if(flag == 1)
 				break;
 		}
-		printf("0-11\n");
 		if(i==16)		{  return ; }
 		preorderTraverseP(pRoot, pInode, pData, idNum, tPwd);
-		printf("0-12\n");
 
 	}	
 
@@ -1020,7 +1035,6 @@ void relativePath(Inode *pInode, TNode *pRoot, TNode **tPwd, TNode **tUwd, Data 
 	{
 		if(strcmp(pData[dbNum].directory.name[i],"..")==0)
 		{
-			printf("idNum:%d\n",pData[dbNum].directory.idNum[i]);
 			idNum = pData[dbNum].directory.idNum[i];
 			break;
 		}	
@@ -1470,15 +1484,12 @@ void mycat(SuperBlock *pSb,Inode *pInode , Data *pData, TNode *Pwd, char *Obj, c
 	DNode *pTailf = &Head;
 	DNode *pJndex = NULL ;
 
-	//	printf("idNum:%d\n",idNum);
 	for(int i=0;i<=(pInode[idNum].fileSize-1)/128;i++)
 	{
 		dbNum=readDbNuminID(pInode+idNum, pData, i);
 		pDNode = createDBNode(pData + dbNum);
 		insertDBNode(&pTail, pDNode);
 	}
-	//	printf("idNum:%d\n",idNum);
-	//	printf("pInode[1].fileSize:%d\n",pInode[1].fileSize);
 	for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext)
 	{
 		if(pIndex == Head.pNext)
@@ -1500,8 +1511,6 @@ void mycat(SuperBlock *pSb,Inode *pInode , Data *pData, TNode *Pwd, char *Obj, c
 		if(flag == 1)
 			break;
 	}
-	//	printf("idNum:%d\n",idNum);
-	//	printf("pInode[1].fileSize:%d\n",pInode[1].fileSize);
 	if(idNum == 0)
 	{
 		findusableInode(pSb->usableInode, &arrNum, &bitNum);
@@ -1509,8 +1518,6 @@ void mycat(SuperBlock *pSb,Inode *pInode , Data *pData, TNode *Pwd, char *Obj, c
 		idNum = arrNum*64 + bitNum - 1;										//새로 할당된 디렉터리의 Inode
 	}
 
-	//	printf("idNum:%d\n",idNum);
-	//	printf("pInode[1].fileSize:%d\n",pInode[1].fileSize);
 	if(strlen(Arg1)!=0)
 	{
 		for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext)
@@ -1537,8 +1544,6 @@ void mycat(SuperBlock *pSb,Inode *pInode , Data *pData, TNode *Pwd, char *Obj, c
 				break;
 		}
 	}
-	//	printf("idNum:%d\n",idNum);
-	//	printf("pInode[1].fileSize:%d\n",pInode[1].fileSize);
 	if(strlen(Arg2)!=0)
 	{
 		for(DNode *pIndex=Head.pNext;pIndex!=NULL;pIndex=pIndex->pNext)
@@ -1565,12 +1570,8 @@ void mycat(SuperBlock *pSb,Inode *pInode , Data *pData, TNode *Pwd, char *Obj, c
 				break;
 		}
 	}
-	//	printf("idNum:%d\n",idNum);
-	//	printf("pInode[1].fileSize:%d\n",pInode[1].fileSize);
 	for(; &Head != pTail;)
 		deleteDBNode(findDBPrevNode(&Head,pTail),&pTail);
-	//	printf("idNum:%d\n",idNum);
-	//	printf("pInode[1].fileSize:%d\n",pInode[1].fileSize);
 
 	if(strlen(Arg1)!=0)
 		for(int i=0;i<=(pInode[idNumAr1].fileSize-1)/128;i++)
@@ -1579,8 +1580,6 @@ void mycat(SuperBlock *pSb,Inode *pInode , Data *pData, TNode *Pwd, char *Obj, c
 			pDNode = createDBNode(pData + dbNum);
 			insertDBNode(&pTail, pDNode);
 		}
-	//	printf("idNum:%d\n",idNum);
-	//	printf("pInode[1].fileSize:%d\n",pInode[1].fileSize);
 	if(strlen(Arg2)!=0)
 		for(int i=0;i<=(pInode[idNumAr2].fileSize-1)/128;i++)
 		{
@@ -1589,19 +1588,14 @@ void mycat(SuperBlock *pSb,Inode *pInode , Data *pData, TNode *Pwd, char *Obj, c
 			insertDBNode(&pTail, pDNode);
 		}
 
-	//	printf("idNum:%d\n",idNum);
-	//	printf("pInode[1].fileSize:%d\n",pInode[1].fileSize);
 
 	tmpfileSize = pInode[idNum].fileSize;
-	//	printf("idNum:%d\n",idNum);
-	//	printf("pInode[1].fileSize:%d\n",pInode[1].fileSize);
 	if((strlen(Arg1)!=0) || (strlen(Arg2)!=0))
 	{
 		for(int i = 0; i <= (pInode[idNum].fileSize-1) / 128; i++)
 		{
 			if(i==1)
 			{
-				//				printf("sindirect:%d\n",pInode[idNum].sindirect);
 				unmarkdataBlock(pSb->usabledataBlock, (pInode[idNum].sindirect)/64, (pInode[idNum].sindirect+1)%64);
 				pInode[idNum].direct = -1;
 			}
@@ -1609,13 +1603,10 @@ void mycat(SuperBlock *pSb,Inode *pInode , Data *pData, TNode *Pwd, char *Obj, c
 				unmarkdataBlock(pSb->usabledataBlock, (pInode[idNum].dlindirect)/64, (pInode[idNum].dlindirect+1)%64);
 			if(i>=103)
 			{
-				//				printf("dlindirect:%d\n",pInode[idNum].dlindirect);
 				dbNum=readSinDinDlin(pData,pInode[idNum].dlindirect,i-103 );
-				//				printf("SindbNum:%d\n",dbNum);
 				unmarkdataBlock(pSb->usabledataBlock, dbNum/64, (dbNum+1)%64);
 			}
 			dbNum = readDbNuminID(pInode+idNum, pData, i);
-			//			printf("dbNum:%d\n",dbNum);
 			unmarkdataBlock(pSb->usabledataBlock, dbNum/64, (dbNum+1)%64);
 		}
 		pInode[idNum].fileSize = 0;
@@ -1650,8 +1641,6 @@ void mycat(SuperBlock *pSb,Inode *pInode , Data *pData, TNode *Pwd, char *Obj, c
 				storeDatainBlock(pInode+idNum,pData,c);
 			}
 		}
-		//	printf("idNum:%d\n",idNum);
-		//	printf("pInode[1].fileSize:%d\n",pInode[1].fileSize);
 
 	}
 	else 
@@ -1672,8 +1661,6 @@ void mycat(SuperBlock *pSb,Inode *pInode , Data *pData, TNode *Pwd, char *Obj, c
 					putchar(pIndex->pData->file[i]);
 			tmpfileSize -= 128;
 		}
-		//	printf("idNum:%d\n",idNum);
-		//	printf("pInode[1].fileSize:%d\n",pInode[1].fileSize);
 	}
 
 }
@@ -2088,7 +2075,7 @@ int main(void)
 			}
 			if(pName != NULL)
 				;
-				tUwd = &Root;
+			tUwd = &Root;
 			mvSecond(&spblock,inode,dataBlock,tPwd,tUwd,pName,tmpname,&Root);
 			tmpname[0]='\0';
 		}
