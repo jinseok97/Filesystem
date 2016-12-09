@@ -164,4 +164,6 @@ void pushSNodetoStack(SNode *pHead, SNode *pSNode);
 void savedatatoSNode(SNode *pSNode, char c, int index);
 
 void deleteSNode(SNode *pHead, SNode *pRemo);
+
+void initInode(Inode *pInode);
 #endif
